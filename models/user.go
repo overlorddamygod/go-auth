@@ -11,11 +11,13 @@ import (
 
 type User struct {
 	gorm.Model
-	Name        string
-	Email       string
-	Password    string
-	Confirmed   bool `gorm:"default:false"`
-	ConfirmedAt time.Time
+	Name                string
+	Email               string
+	Password            string
+	PasswordResetCode   string
+	PasswordResetCodeAt time.Time
+	Confirmed           bool `gorm:"default:false"`
+	ConfirmedAt         time.Time
 }
 
 func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
@@ -40,6 +42,23 @@ func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
 		return err
 	}
 	return
+}
+
+func (u *User) GeneratePasswordRecoveryCode(db *gorm.DB) (code string, err error) {
+	randomString, err := utils.GenerateRandomString(12)
+
+	if err != nil {
+		return "", errors.New("error while password recovery")
+	}
+
+	u.PasswordResetCode = randomString
+	u.PasswordResetCodeAt = time.Now()
+	result := db.Save(u)
+
+	if result.Error != nil {
+		return "", errors.New("error saving to the db")
+	}
+	return u.PasswordResetCode, nil
 }
 
 type SanitizedUser struct {
