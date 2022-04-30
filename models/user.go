@@ -11,13 +11,13 @@ import (
 
 type User struct {
 	gorm.Model
-	Name                string
-	Email               string
-	Password            string
-	PasswordResetCode   string
-	PasswordResetCodeAt time.Time
-	Confirmed           bool `gorm:"default:false"`
-	ConfirmedAt         time.Time
+	Name                 string `validate:"required,min=3"`
+	Email                string `validate:"required,email"`
+	Password             string `validate:"required,min=6,max=20"`
+	PasswordResetToken   string
+	PasswordResetTokenAt time.Time
+	Confirmed            bool `gorm:"default:false"`
+	ConfirmedAt          time.Time
 }
 
 func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
@@ -30,6 +30,13 @@ func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
 	if !utils.IsEmailValid(u.Email) {
 		return errors.New("invalid email")
 	}
+	// validate := validator.New()
+	// // validator.Validate(u)
+	// err := validate.Struct(u)
+
+	// if err != nil {
+	// 	return err
+	// }
 
 	result := tx.First(&User{}, "email = ?", u.Email)
 
@@ -41,24 +48,49 @@ func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
 	if err != nil {
 		return err
 	}
-	return
+	return nil
 }
 
-func (u *User) GeneratePasswordRecoveryCode(db *gorm.DB) (code string, err error) {
-	randomString, err := utils.GenerateRandomString(12)
+func (u *User) GeneratePasswordRecoveryToken(db *gorm.DB) (token string, err error) {
+	randomString, err := utils.GenerateRandomString(9)
 
 	if err != nil {
 		return "", errors.New("error while password recovery")
 	}
 
-	u.PasswordResetCode = randomString
-	u.PasswordResetCodeAt = time.Now()
+	u.PasswordResetToken = randomString
+
+	encryptedToken, err := utils.Encrypt(randomString)
+
+	if err != nil {
+		return "", errors.New("error while password recovery")
+	}
+
+	u.PasswordResetTokenAt = time.Now()
 	result := db.Save(u)
 
 	if result.Error != nil {
 		return "", errors.New("error saving to the db")
 	}
-	return u.PasswordResetCode, nil
+	return encryptedToken, nil
+}
+
+func (u *User) ResetPasswordWithToken(db *gorm.DB, password string) (err error) {
+	u.Password, err = utils.HashPassword(password)
+
+	if err != nil {
+		return err
+	}
+
+	u.PasswordResetToken = ""
+	u.PasswordResetTokenAt = time.Time{}
+	result := db.Save(u)
+
+	if result.Error != nil {
+		return errors.New("error saving to the db")
+	}
+
+	return nil
 }
 
 type SanitizedUser struct {

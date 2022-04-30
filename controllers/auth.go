@@ -1,8 +1,10 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
@@ -231,7 +233,70 @@ func (a AuthController) RequestPasswordRecovery(c *gin.Context) {
 		return
 	}
 
-	resetCode, err := dbUser.GeneratePasswordRecoveryCode(db)
+	resetCode, err := dbUser.GeneratePasswordRecoveryToken(db)
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error":   true,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"token": false,
+		"code":  resetCode,
+	})
+}
+
+func (a AuthController) PasswordReset(c *gin.Context) {
+	token := c.Query("token")
+	if token == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error":   true,
+			"message": "invalid token",
+		})
+		return
+	}
+	token, err := utils.Decrypt(token)
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error":   true,
+			"message": "invalid token",
+		})
+		return
+	}
+
+	var db = db.GetDB()
+
+	var dbUser models.User
+
+	result := db.First(&dbUser, "password_reset_token = ?", token)
+
+	if result.Error != nil {
+		fmt.Println(result.Error)
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error":   true,
+			"message": "invalid token",
+		})
+		return
+	}
+
+	// check if reset token is between 1 day
+	if time.Since(dbUser.PasswordResetTokenAt).Hours() > 24 {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error":   true,
+			"message": "token expired",
+		})
+		return
+	}
+
+	// get password from body
+	var user models.User
+	c.Bind(&user)
+
+	err = dbUser.ResetPasswordWithToken(db, user.Password)
 
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
@@ -243,6 +308,36 @@ func (a AuthController) RequestPasswordRecovery(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"error": false,
-		"code":  resetCode,
+	})
+}
+
+func (a AuthController) GetMe(c *gin.Context) {
+
+	var db = db.GetDB()
+	userId, exists := c.Get("user_id")
+
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error":   true,
+			"message": "user id is required",
+		})
+		return
+	}
+
+	var user models.User
+
+	result := db.First(&user, "id = ?", userId)
+
+	if result.Error != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error":   true,
+			"message": "user not found",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"error": false,
+		"user":  user.SanitizeUser(),
 	})
 }
