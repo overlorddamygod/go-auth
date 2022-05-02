@@ -8,56 +8,98 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
-	"github.com/overlorddamygod/go-auth/db"
+	"github.com/overlorddamygod/go-auth/mailer"
 	"github.com/overlorddamygod/go-auth/models"
 	"github.com/overlorddamygod/go-auth/utils"
+	"gorm.io/gorm"
 )
 
-type AuthController struct{}
+type AuthController struct {
+	db     *gorm.DB
+	mailer *mailer.Mailer
+}
 
-var userModel = new(models.User)
+func NewAuthController(db *gorm.DB, mailer *mailer.Mailer) AuthController {
+	return AuthController{
+		db:     db,
+		mailer: mailer,
+	}
+}
 
-func (a AuthController) SignUp(c *gin.Context) {
-	var db = db.GetDB()
+// var userModel = new(models.User)
 
-	var user models.User
-	c.Bind(&user)
-	result := db.Create(&user)
+type SignUpParams struct {
+	Name     string `json:"name" binding:"required"`
+	Email    string `json:"email" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
+func (a *AuthController) SignUp(c *gin.Context) {
+	var params SignUpParams
+	c.Bind(&params)
+
+	var user models.User = models.NewUser(params.Name, params.Email, params.Password)
+
+	result := a.db.Create(&user)
 
 	if result.Error != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   true,
 			"message": result.Error.Error(),
 		})
 		return
 	}
+	err := a.mailer.SendConfirmationMail(user.Email, user.Name, "http://localhost:8080/api/v1/auth/confirm?token="+user.ConfirmationToken)
+	fmt.Println(err)
+
 	c.JSON(http.StatusCreated, gin.H{
 		"error": false,
 		"user":  user.SanitizeUser(),
 	})
 }
 
-func (a AuthController) SignIn(c *gin.Context) {
-	var db = db.GetDB()
-	var user models.User
-	c.Bind(&user)
+type SignInParams struct {
+	Email    string `json:"email" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
+func (a *AuthController) SignIn(c *gin.Context) {
+	var params SignInParams
+	c.Bind(&params)
+
+	if params.Email == "" || params.Password == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   true,
+			"message": "email and password are required",
+		})
+		return
+	}
 
 	var dbUser models.User
 
-	result := db.First(&dbUser, "email = ?", user.Email)
+	result := a.db.First(&dbUser, "email = ?", params.Email)
 
 	if result.Error != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
+		c.JSON(http.StatusNotFound, gin.H{
 			"error":   true,
 			"message": "email doesnot exist",
 		})
 		return
 	}
 
-	if !utils.CheckPasswordHash(user.Password, dbUser.Password) {
+	if !utils.CheckPasswordHash(params.Password, dbUser.Password) {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error":   true,
 			"message": "invalid password",
+		})
+		return
+	}
+
+	// check if user is confirmed
+	if !dbUser.Confirmed {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error":   true,
+			"message": "user is not confirmed",
 		})
 		return
 	}
@@ -87,10 +129,17 @@ func (a AuthController) SignIn(c *gin.Context) {
 		})
 		return
 	}
+	// get user agent header
+	userAgent := c.GetHeader("User-Agent")
 
-	result = db.Create(&models.RefreshToken{
-		Token:  refreshToken,
-		UserID: dbUser.ID,
+	// get user ip
+	ip := c.ClientIP()
+
+	result = a.db.Create(&models.RefreshToken{
+		Token:     refreshToken,
+		UserID:    dbUser.ID,
+		UserAgent: userAgent,
+		IP:        ip,
 	})
 
 	if result.Error != nil {
@@ -108,15 +157,42 @@ func (a AuthController) SignIn(c *gin.Context) {
 	})
 }
 
-func (a AuthController) RefreshToken(c *gin.Context) {
-	var db = db.GetDB()
-
+func (a *AuthController) SignOut(c *gin.Context) {
 	var refreshToken string = c.GetHeader("X-Refresh-Token")
 
 	if refreshToken == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   true,
-			"message": "refresh token is required",
+			"message": "refresh token required",
+		})
+		return
+	}
+
+	// delete refresh token
+	result := a.db.Where("token = ?", refreshToken).Delete(&models.RefreshToken{})
+	fmt.Println(result.Error)
+
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   true,
+			"message": "failed to sign out",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"error":   false,
+		"message": "successfully signed out",
+	})
+}
+
+func (a *AuthController) RefreshToken(c *gin.Context) {
+	var refreshToken string = c.GetHeader("X-Refresh-Token")
+
+	if refreshToken == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   true,
+			"message": "refresh token required",
 		})
 		return
 	}
@@ -126,7 +202,7 @@ func (a AuthController) RefreshToken(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error":   true,
-			"message": "refresh token is invalid",
+			"message": "refresh token invalid",
 		})
 		return
 	}
@@ -136,7 +212,7 @@ func (a AuthController) RefreshToken(c *gin.Context) {
 	if !ok || !token.Valid {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error":   true,
-			"message": "refresh token is invalid",
+			"message": "refresh token invalid",
 		})
 		return
 	}
@@ -145,12 +221,12 @@ func (a AuthController) RefreshToken(c *gin.Context) {
 	email := claims["email"].(string)
 
 	var refreshTokenModel models.RefreshToken
-	result := db.First(&refreshTokenModel, "token = ?", refreshToken)
+	result := a.db.First(&refreshTokenModel, "token = ?", refreshToken)
 
 	if result.Error != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error":   true,
-			"message": "refresh token is invalid",
+			"message": "refresh token expired",
 		})
 		return
 	}
@@ -158,7 +234,7 @@ func (a AuthController) RefreshToken(c *gin.Context) {
 	if refreshTokenModel.Revoked {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error":   true,
-			"message": "refresh token is revoked",
+			"message": "refresh token revoked",
 		})
 		return
 	}
@@ -182,13 +258,13 @@ func (a AuthController) RefreshToken(c *gin.Context) {
 	})
 }
 
-func (a AuthController) VerifyLogin(c *gin.Context) {
+func (a *AuthController) VerifyLogin(c *gin.Context) {
 	accesstoken := c.GetHeader("X-Access-Token")
 
 	if accesstoken == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   true,
-			"message": "access token is required",
+			"message": "access token required",
 		})
 		return
 	}
@@ -198,7 +274,7 @@ func (a AuthController) VerifyLogin(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error":   true,
-			"message": "access token is invalid",
+			"message": "access token invalid",
 		})
 		return
 	}
@@ -208,32 +284,35 @@ func (a AuthController) VerifyLogin(c *gin.Context) {
 	})
 }
 
-func (a AuthController) RequestPasswordRecovery(c *gin.Context) {
-	var db = db.GetDB()
-	var user models.User
-	c.Bind(&user)
+type RecoveryParams struct {
+	Email string `json:"email" binding:"required"`
+}
 
-	if strings.TrimSpace(user.Email) == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{
+func (a *AuthController) RequestPasswordRecovery(c *gin.Context) {
+	var params RecoveryParams
+	c.Bind(&params)
+
+	if strings.TrimSpace(params.Email) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   true,
-			"message": "email address is required",
+			"message": "email address required",
 		})
 		return
 	}
 
 	var dbUser models.User
 
-	result := db.First(&dbUser, "email = ?", user.Email)
+	result := a.db.First(&dbUser, "email = ?", params.Email)
 
 	if result.Error != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
+		c.JSON(http.StatusNotFound, gin.H{
 			"error":   true,
 			"message": "email doesnot exist",
 		})
 		return
 	}
 
-	resetCode, err := dbUser.GeneratePasswordRecoveryToken(db)
+	resetCode, err := dbUser.GeneratePasswordRecoveryToken(a.db)
 
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
@@ -249,10 +328,10 @@ func (a AuthController) RequestPasswordRecovery(c *gin.Context) {
 	})
 }
 
-func (a AuthController) PasswordReset(c *gin.Context) {
+func (a *AuthController) PasswordReset(c *gin.Context) {
 	token := c.Query("token")
 	if token == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   true,
 			"message": "invalid token",
 		})
@@ -268,11 +347,9 @@ func (a AuthController) PasswordReset(c *gin.Context) {
 		return
 	}
 
-	var db = db.GetDB()
-
 	var dbUser models.User
 
-	result := db.First(&dbUser, "password_reset_token = ?", token)
+	result := a.db.First(&dbUser, "password_reset_token = ?", token)
 
 	if result.Error != nil {
 		fmt.Println(result.Error)
@@ -293,10 +370,10 @@ func (a AuthController) PasswordReset(c *gin.Context) {
 	}
 
 	// get password from body
-	var user models.User
-	c.Bind(&user)
+	var params SignInParams
+	c.Bind(&params)
 
-	err = dbUser.ResetPasswordWithToken(db, user.Password)
+	err = dbUser.ResetPasswordWithToken(a.db, params.Password)
 
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
@@ -311,13 +388,11 @@ func (a AuthController) PasswordReset(c *gin.Context) {
 	})
 }
 
-func (a AuthController) GetMe(c *gin.Context) {
-
-	var db = db.GetDB()
+func (a *AuthController) GetMe(c *gin.Context) {
 	userId, exists := c.Get("user_id")
 
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   true,
 			"message": "user id is required",
 		})
@@ -326,10 +401,10 @@ func (a AuthController) GetMe(c *gin.Context) {
 
 	var user models.User
 
-	result := db.First(&user, "id = ?", userId)
+	result := a.db.First(&user, "id = ?", userId)
 
 	if result.Error != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
+		c.JSON(http.StatusNotFound, gin.H{
 			"error":   true,
 			"message": "user not found",
 		})
@@ -339,5 +414,42 @@ func (a AuthController) GetMe(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"error": false,
 		"user":  user.SanitizeUser(),
+	})
+}
+
+// confirm account
+func (a *AuthController) ConfirmAccount(c *gin.Context) {
+	token := c.Query("token")
+
+	if token == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   true,
+			"message": "token required",
+		})
+		return
+	}
+
+	var dbUser models.User
+
+	result := a.db.First(&dbUser, "confirmation_token = ?", token)
+
+	if result.Error != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error":   true,
+			"message": "invalid token",
+		})
+		return
+	}
+
+	if err := dbUser.ConfirmAccount(a.db); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error":   true,
+			"message": "failed to confirm account",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"error": false,
 	})
 }

@@ -12,7 +12,7 @@ var (
 	jwt_refresh_token_secret = []byte("my_refresh_token_secret_key")
 
 	jwt_access_token_expiration  = time.Hour * 1
-	jwt_refresh_token_expiration = time.Hour * 5
+	jwt_refresh_token_expiration = time.Hour * 24
 )
 
 type CustomClaims struct {
