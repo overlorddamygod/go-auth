@@ -3,7 +3,7 @@ package server
 import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/overlorddamygod/go-auth/controllers"
+	authController "github.com/overlorddamygod/go-auth/controllers/auth"
 	"github.com/overlorddamygod/go-auth/db"
 	"github.com/overlorddamygod/go-auth/mailer"
 	"github.com/overlorddamygod/go-auth/middlewares"
@@ -23,7 +23,7 @@ func NewRouter() *gin.Engine {
 		authGroup := v1.Group("auth")
 		{
 			mailer := mailer.NewMailer()
-			auth := controllers.NewAuthController(db.GetDB(), mailer)
+			auth := authController.NewAuthController(db.GetDB(), mailer)
 			authGroup.POST("signup", auth.SignUp)
 			authGroup.POST("signin", auth.SignIn)
 			authGroup.POST("signout", auth.SignOut)

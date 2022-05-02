@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/overlorddamygod/go-auth/configs"
 	mail "github.com/xhit/go-simple-mail/v2"
 )
 
@@ -16,10 +17,12 @@ func NewMailer() *Mailer {
 	// intialized mail
 	mailServer := mail.NewSMTPClient()
 
-	mailServer.Host = "smtp.mailgun.org"
-	mailServer.Port = 587
-	mailServer.Username = "postmaster@sandboxd2841c95e0b341629e9b9f2cc63fd90e.mailgun.org"
-	mailServer.Password = "2e2a9d65ef908ff91aca7bc9166a2b3e-1831c31e-db49bda2"
+	mailConfig := configs.GetConfig().Mail
+
+	mailServer.Host = mailConfig.Host
+	mailServer.Port = mailConfig.Port
+	mailServer.Username = mailConfig.Username
+	mailServer.Password = mailConfig.Password
 	mailServer.Encryption = mail.EncryptionTLS
 
 	smtpClient, err := mailServer.Connect()

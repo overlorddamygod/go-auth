@@ -5,14 +5,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
-)
-
-var (
-	jwt_access_token_secret  = []byte("my_access_token_secret_key")
-	jwt_refresh_token_secret = []byte("my_refresh_token_secret_key")
-
-	jwt_access_token_expiration  = time.Hour * 1
-	jwt_refresh_token_expiration = time.Hour * 24
+	"github.com/overlorddamygod/go-auth/configs"
 )
 
 type CustomClaims struct {
@@ -36,18 +29,25 @@ func jwtVerify(token string, secret interface{}) (*jwt.Token, error) {
 }
 
 func JwtAccessToken(claims CustomClaims) (string, error) {
-	claims.StandardClaims.ExpiresAt = time.Now().Add(jwt_access_token_expiration).Unix()
-	return jwtSign(claims, jwt_access_token_secret)
+	accessJwt := configs.GetConfig().AccessJwt
+
+	claims.StandardClaims.ExpiresAt = time.Now().Add(accessJwt.Expiration).Unix()
+	return jwtSign(claims, accessJwt.Secret)
 }
 func JwtRefreshToken(claims CustomClaims) (string, error) {
-	claims.StandardClaims.ExpiresAt = time.Now().Add(jwt_refresh_token_expiration).Unix()
-	return jwtSign(claims, jwt_refresh_token_secret)
+	refreshJwt := configs.GetConfig().RefreshJwt
+
+	claims.StandardClaims.ExpiresAt = time.Now().Add(refreshJwt.Expiration).Unix()
+	return jwtSign(claims, refreshJwt.Secret)
 }
 
 func JwtAccessTokenVerify(token string) (*jwt.Token, error) {
-	return jwtVerify(token, jwt_access_token_secret)
+	accessJwt := configs.GetConfig().AccessJwt
+
+	return jwtVerify(token, accessJwt.Secret)
 }
 
 func JwtRefreshTokenVerify(token string) (*jwt.Token, error) {
-	return jwtVerify(token, jwt_refresh_token_secret)
+	refreshJwt := configs.GetConfig().RefreshJwt
+	return jwtVerify(token, refreshJwt.Secret)
 }
