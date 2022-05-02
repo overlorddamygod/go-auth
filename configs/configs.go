@@ -18,7 +18,7 @@ type SMTP struct {
 }
 
 type JwtConfig struct {
-	Secret     string
+	Secret     []byte
 	Expiration time.Duration
 }
 
@@ -38,13 +38,13 @@ func LoadConfig() {
 		log.Fatalf("Error loading .env file")
 	}
 
-	access, _ := GetJWTConfig("JWT_ACCESS")
-	refresh, _ := GetJWTConfig("JWT_REFRESH")
+	access, _ := loadJWTConfig("JWT_ACCESS")
+	refresh, _ := loadJWTConfig("JWT_REFRESH")
 
 	smtpPort, _ := strconv.Atoi(os.Getenv("SMTP_PORT"))
 
 	config = Config{
-		RequireConfirmation: true,
+		RequireConfirmation: false,
 		AccessJwt:           access,
 		RefreshJwt:          refresh,
 		Mail: SMTP{
@@ -61,11 +61,11 @@ func GetConfig() Config {
 	return config
 }
 
-func GetJWTConfig(prefix string) (c JwtConfig, e error) {
+func loadJWTConfig(prefix string) (c JwtConfig, e error) {
 	secret := os.Getenv(prefix + "_SECRET")
 	expiration, err := strconv.Atoi(os.Getenv(prefix + "_EXPIRATION_HOURS"))
 	c = JwtConfig{
-		Secret: secret,
+		Secret: []byte(secret),
 	}
 	e = err
 	c.Expiration = time.Hour * time.Duration(expiration)

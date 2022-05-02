@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/overlorddamygod/go-auth/configs"
 	"github.com/overlorddamygod/go-auth/utils"
 	"gorm.io/gorm"
 )
@@ -40,10 +41,15 @@ func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
 	if !utils.IsEmailValid(u.Email) {
 		return errors.New("invalid email")
 	}
-	u.ConfirmationToken, err = utils.GenerateRandomString(15)
+	if !configs.GetConfig().RequireConfirmation {
+		u.Confirmed = true
+		u.ConfirmedAt = time.Now()
+	} else {
+		u.ConfirmationToken, err = utils.GenerateRandomString(15)
 
-	if err != nil {
-		return errors.New("server error")
+		if err != nil {
+			return errors.New("server error")
+		}
 	}
 	// validate := validator.New()
 	// // validator.Validate(u)

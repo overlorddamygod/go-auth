@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/overlorddamygod/go-auth/configs"
 	"github.com/overlorddamygod/go-auth/models"
 )
 
@@ -29,8 +30,10 @@ func (a *AuthController) SignUp(c *gin.Context) {
 		})
 		return
 	}
-	err := a.mailer.SendConfirmationMail(user.Email, user.Name, "http://localhost:8080/api/v1/auth/confirm?token="+user.ConfirmationToken)
-	fmt.Println(err)
+	if configs.GetConfig().RequireConfirmation {
+		err := a.mailer.SendConfirmationMail(user.Email, user.Name, "http://localhost:8080/api/v1/auth/confirm?token="+user.ConfirmationToken)
+		fmt.Println("MAIL: ", err)
+	}
 
 	c.JSON(http.StatusCreated, gin.H{
 		"error": false,

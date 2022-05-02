@@ -2,7 +2,6 @@ package mailer
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/overlorddamygod/go-auth/configs"
 	mail "github.com/xhit/go-simple-mail/v2"
@@ -27,7 +26,7 @@ func NewMailer() *Mailer {
 
 	smtpClient, err := mailServer.Connect()
 	if err != nil {
-		log.Fatal(err)
+		// log.Fatal(err)
 	} else {
 		fmt.Println("Successfully connected to SMTP server")
 	}
