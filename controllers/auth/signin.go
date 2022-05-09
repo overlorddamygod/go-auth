@@ -14,7 +14,7 @@ import (
 
 type SignInParams struct {
 	Email    string `json:"email" binding:"required"`
-	Password string `json:"password" binding:"required"`
+	Password string `json:"password"`
 }
 
 func (a *AuthController) SignIn(c *gin.Context) {
@@ -68,7 +68,6 @@ func (a *AuthController) SignIn(c *gin.Context) {
 		}
 
 		c.JSON(http.StatusOK, res)
-		return
 	case "magiclink":
 		res, code, err := dbUser.GenerateMagicLink(c, a.db, a.mailer)
 
@@ -80,13 +79,11 @@ func (a *AuthController) SignIn(c *gin.Context) {
 		}
 
 		c.JSON(http.StatusOK, res)
-		return
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   true,
 			"message": "invalid login type",
 		})
-		return
 	}
 }
 
