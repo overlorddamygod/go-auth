@@ -2,24 +2,34 @@ package models
 
 import (
 	"errors"
+	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/overlorddamygod/go-auth/configs"
+	"github.com/overlorddamygod/go-auth/mailer"
 	"github.com/overlorddamygod/go-auth/utils"
 	"gorm.io/gorm"
 )
 
 type User struct {
 	gorm.Model
-	Name                 string `validate:"required,min=3" binding:"required"`
-	Email                string `validate:"required,email"`
-	Password             string `validate:"required,min=6,max=20"`
+	Name     string `validate:"required,min=3" binding:"required"`
+	Email    string `validate:"required,email"`
+	Password string `validate:"required,min=6,max=20"`
+
 	PasswordResetToken   string
 	PasswordResetTokenAt time.Time
-	ConfirmationToken    string
-	Confirmed            bool `gorm:"default:false"`
-	ConfirmedAt          time.Time
+
+	// magic link token
+	Token       string
+	TokenSentAt time.Time
+
+	ConfirmationToken string
+	Confirmed         bool `gorm:"default:false"`
+	ConfirmedAt       time.Time
 }
 
 func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
@@ -70,6 +80,10 @@ func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
 		return err
 	}
 	return nil
+}
+
+func (u *User) GetUserByEmail(email string, db *gorm.DB) (tx *gorm.DB) {
+	return db.First(u, "email = ?", email)
 }
 
 func (u *User) GeneratePasswordRecoveryToken(db *gorm.DB) (token string, err error) {
@@ -127,6 +141,10 @@ func (u *User) ResetPasswordWithToken(db *gorm.DB, password string) (err error) 
 	return nil
 }
 
+func (u *User) IsConfirmed() bool {
+	return u.Confirmed
+}
+
 func (u *User) ConfirmAccount(db *gorm.DB) error {
 	if u.Confirmed {
 		return errors.New("account already confirmed")
@@ -136,6 +154,149 @@ func (u *User) ConfirmAccount(db *gorm.DB) error {
 	u.ConfirmedAt = time.Now()
 	return db.Save(u).Error
 }
+
+func (u *User) GenerateAccessRefreshToken(c *gin.Context, db *gorm.DB) (tokenMap map[string]string, err error) {
+	tokenMap = make(map[string]string)
+	accessToken, aTerr := utils.JwtAccessToken(utils.CustomClaims{
+		UserID: u.ID,
+		Email:  u.Email,
+	})
+
+	if aTerr != nil {
+		return nil, errors.New("failed to sign in")
+	}
+
+	refreshToken, rTerr := utils.JwtRefreshToken(utils.CustomClaims{
+		UserID: u.ID,
+		Email:  u.Email,
+	})
+
+	if rTerr != nil {
+		return nil, errors.New("failed to sign in")
+	}
+
+	userAgent := c.GetHeader("User-Agent")
+
+	// get user ip
+	ip := c.ClientIP()
+
+	// create refresh token
+	refreshTokenModel := RefreshToken{
+		Token:     refreshToken,
+		UserID:    u.ID,
+		UserAgent: userAgent,
+		IP:        ip,
+	}
+	result := db.Create(&refreshTokenModel)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	tokenMap["accessToken"] = accessToken
+	tokenMap["refreshToken"] = refreshToken
+
+	return tokenMap, nil
+}
+
+func (u *User) SignInWithEmail(password string, db *gorm.DB, c *gin.Context) (obj interface{}, code int, err error) {
+	// sign in with email
+	if !utils.CheckPasswordHash(password, u.Password) {
+		return nil, http.StatusUnauthorized, errors.New("invalid password")
+	}
+
+	if !u.IsConfirmed() {
+		return nil, http.StatusUnauthorized, errors.New("user is not confirmed")
+	}
+
+	accessToken, aTerr := utils.JwtAccessToken(utils.CustomClaims{
+		UserID: u.ID,
+		Email:  u.Email,
+	})
+
+	if aTerr != nil {
+		return nil, http.StatusInternalServerError, errors.New("failed to sign in")
+	}
+
+	refreshToken, rTerr := utils.JwtRefreshToken(utils.CustomClaims{
+		UserID: u.ID,
+		Email:  u.Email,
+	})
+
+	if rTerr != nil {
+		return nil, http.StatusInternalServerError, errors.New("failed to sign in")
+	}
+
+	userAgent := c.GetHeader("User-Agent")
+
+	// get user ip
+	ip := c.ClientIP()
+
+	// create refresh token
+	refreshTokenModel := RefreshToken{
+		Token:     refreshToken,
+		UserID:    u.ID,
+		UserAgent: userAgent,
+		IP:        ip,
+	}
+	result := db.Create(&refreshTokenModel)
+
+	if result.Error != nil {
+		return nil, http.StatusInternalServerError, result.Error
+	}
+
+	return gin.H{
+		"error":         false,
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
+	}, http.StatusOK, nil
+}
+
+func (u *User) GenerateMagicLink(c *gin.Context, db *gorm.DB, mailer *mailer.Mailer) (obj interface{}, code int, err error) {
+	// sign in with magic link
+	randomString, err := utils.GenerateRandomString(9)
+
+	if err != nil {
+		return nil, http.StatusInternalServerError, errors.New("server error")
+	}
+
+	u.Token = randomString
+
+	encryptedToken, err := utils.Encrypt(randomString)
+
+	if err != nil {
+		return nil, http.StatusInternalServerError, errors.New("server error")
+	}
+
+	u.TokenSentAt = time.Now()
+	redirect_to := c.Query("redirect_to")
+
+	magicLink := fmt.Sprintf("http://localhost:8080/api/v1/auth/verify?type=%s&token=%s&redirect_to=%s", "magiclink", encryptedToken, redirect_to)
+	err = db.Transaction(func(tx *gorm.DB) error {
+		if err = tx.Save(u).Error; err != nil {
+			return err
+		}
+
+		println(magicLink)
+
+		// if err := mailer.SendMagicLink(u.Email, u.Name, magicLink); err != nil {
+		// 	return err
+		// }
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, http.StatusInternalServerError, errors.New("server error")
+	}
+
+	return gin.H{
+		"error":   false,
+		"message": "Succesfully sent magic link to your email",
+	}, http.StatusOK, nil
+}
+
+// func (U *u) signInWith
 
 func NewUser(name string, email string, password string) User {
 	return User{

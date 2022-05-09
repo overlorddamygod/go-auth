@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/overlorddamygod/go-auth/models"
 	"github.com/overlorddamygod/go-auth/utils"
+	"gorm.io/gorm"
 )
 
 type RecoveryParams struct {
@@ -79,10 +80,16 @@ func (a *AuthController) PasswordReset(c *gin.Context) {
 	result := a.db.First(&dbUser, "password_reset_token = ?", token)
 
 	if result.Error != nil {
-		fmt.Println(result.Error)
-		c.JSON(http.StatusUnauthorized, gin.H{
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error":   true,
+				"message": "invalid token",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   true,
-			"message": "invalid token",
+			"message": "server error",
 		})
 		return
 	}

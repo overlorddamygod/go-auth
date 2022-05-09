@@ -28,6 +28,7 @@ func NewRouter() *gin.Engine {
 			authGroup.POST("signin", auth.SignIn)
 			authGroup.POST("signout", auth.SignOut)
 			authGroup.POST("refresh", auth.RefreshToken)
+			authGroup.GET("verify", auth.VerifyLogin)
 			authGroup.POST("verify", auth.VerifyLogin)
 			authGroup.POST("request-password-reset", auth.RequestPasswordRecovery)
 			authGroup.POST("reset-password", auth.PasswordReset)

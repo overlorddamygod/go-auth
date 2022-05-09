@@ -1,7 +1,6 @@
 package configs
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -54,7 +53,7 @@ func LoadConfig() {
 			Password: os.Getenv("SMTP_PASSWORD"),
 		},
 	}
-	fmt.Println(config)
+	// fmt.Println(config)
 }
 
 func GetConfig() Config {

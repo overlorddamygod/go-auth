@@ -27,6 +27,7 @@ func NewMailer() *Mailer {
 	smtpClient, err := mailServer.Connect()
 	if err != nil {
 		// log.Fatal(err)
+		println(err.Error())
 	} else {
 		fmt.Println("Successfully connected to SMTP server")
 	}
@@ -72,6 +73,28 @@ func (m *Mailer) SendConfirmationMail(email string, name string, link string) er
 	err := m.Send(MailParams{
 		To:      email,
 		Subject: "Confirm your account",
+		Body:    fmt.Sprintf(body, name, link),
+	})
+	return err
+}
+
+func (m *Mailer) SendMagicLink(email string, name string, link string) error {
+	if email == "" {
+		return fmt.Errorf("email is empty")
+	}
+	body := `
+	<div>Hi %s,</div>
+	<br>
+	<div>You have requested a magic link to access the site.</div>
+	<br>
+	<div>Click <a href="%s">here</a> to access the site.</div>
+	<br>
+	<div>Thanks! – The Go Auth team</div>
+	`
+
+	err := m.Send(MailParams{
+		To:      email,
+		Subject: "Magic link",
 		Body:    fmt.Sprintf(body, name, link),
 	})
 	return err
