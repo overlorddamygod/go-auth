@@ -17,7 +17,7 @@ import (
 type User struct {
 	gorm.Model
 	Name     string `validate:"required,min=3" binding:"required"`
-	Email    string `validate:"required,email"`
+	Email    string `gorm:"unique" validate:"required,email"`
 	Password string `validate:"required,min=6,max=20"`
 
 	PasswordResetToken   string
@@ -27,9 +27,10 @@ type User struct {
 	Token       string
 	TokenSentAt time.Time
 
-	ConfirmationToken string
-	Confirmed         bool `gorm:"default:false"`
-	ConfirmedAt       time.Time
+	ConfirmationToken   string
+	ConfirmationTokenAt time.Time
+	Confirmed           bool `gorm:"default:false"`
+	ConfirmedAt         time.Time
 }
 
 func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
@@ -51,11 +52,12 @@ func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
 	if !utils.IsEmailValid(u.Email) {
 		return errors.New("invalid email")
 	}
-	if !configs.GetConfig().RequireConfirmation {
+	if !configs.GetConfig().RequireEmailConfirmation {
 		u.Confirmed = true
 		u.ConfirmedAt = time.Now()
 	} else {
 		u.ConfirmationToken, err = utils.GenerateRandomString(15)
+		u.ConfirmationTokenAt = time.Now()
 
 		if err != nil {
 			return errors.New("server error")
@@ -150,7 +152,7 @@ func (u *User) IsConfirmed() bool {
 }
 
 func (u *User) ConfirmAccount(db *gorm.DB) error {
-	if u.Confirmed {
+	if u.IsConfirmed() {
 		return errors.New("account already confirmed")
 	}
 	u.ConfirmationToken = ""

@@ -31,6 +31,11 @@ func (a *AuthController) GetMe(c *gin.Context) {
 		return
 	}
 
+	if !user.IsConfirmed() {
+		response.BadRequest(c, "user not confirmed")
+		return
+	}
+
 	response.WithCustomStatusAndMessage(c, http.StatusOK, gin.H{
 		"error": false,
 		"user":  user.SanitizeUser(),

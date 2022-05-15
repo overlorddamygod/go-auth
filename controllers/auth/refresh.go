@@ -37,8 +37,20 @@ func (a *AuthController) RefreshToken(c *gin.Context) {
 	userID := uint(claims["user_id"].(float64))
 	email := claims["email"].(string)
 
+	var dbUser models.User
+	result := a.db.First(&dbUser, "id = ?", userID)
+
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			response.NotFound(c, "user not found")
+			return
+		}
+		response.ServerError(c, "failed to refresh token")
+		return
+	}
+
 	var refreshTokenModel models.RefreshToken
-	result := a.db.First(&refreshTokenModel, "token = ?", refreshToken)
+	result = a.db.First(&refreshTokenModel, "token = ?", refreshToken)
 
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -63,6 +75,7 @@ func (a *AuthController) RefreshToken(c *gin.Context) {
 		response.ServerError(c, "failed to refresh token")
 		return
 	}
+
 	response.WithCustomStatusAndMessage(c, http.StatusOK, gin.H{
 		"error":        false,
 		"access-token": accessToken,

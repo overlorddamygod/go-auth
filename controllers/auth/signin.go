@@ -46,6 +46,11 @@ func (a *AuthController) SignIn(c *gin.Context) {
 		return
 	}
 
+	if !dbUser.IsConfirmed() {
+		response.Unauthorized(c, "user not confirmed")
+		return
+	}
+
 	switch loginType {
 	case "email":
 		res, code, err := dbUser.SignInWithEmail(params.Password, a.db, c)
@@ -67,8 +72,8 @@ func (a *AuthController) SignIn(c *gin.Context) {
 				"error":   true,
 				"message": err.Error(),
 			})
+			return
 		}
-
 		c.JSON(http.StatusOK, res)
 	default:
 		response.BadRequest(c, "invalid login type")
@@ -132,6 +137,7 @@ func (a *AuthController) VerifyLogin(c *gin.Context) {
 			redirectTo = fmt.Sprintf("%s?type=magiclink&access_token=%s&refresh_token=%s", redirectTo, tokenMap["accessToken"], tokenMap["refreshToken"])
 			c.Redirect(http.StatusFound, redirectTo)
 		}
+		return
 	default:
 		response.BadRequest(c, "invalid login type")
 		return
