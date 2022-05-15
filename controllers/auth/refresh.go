@@ -33,13 +33,19 @@ func (a *AuthController) RefreshToken(c *gin.Context) {
 	if !ok || !token.Valid {
 		response.Unauthorized(c, "refresh token invalid")
 		return
-	}
 
-	userID := claims["user_id"].(uuid.UUID)
+	}
+	userId := claims["user_id"].(string)
+	userID, err := uuid.Parse(userId)
+
+	if err != nil {
+		response.Unauthorized(c, "refresh token invalid")
+		return
+	}
 	email := claims["email"].(string)
 
 	var dbUser models.User
-	result := a.db.First(&dbUser, "id = ?", userID)
+	result := a.db.First(&dbUser, "id = ?", claims["user_id"].(string))
 
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
