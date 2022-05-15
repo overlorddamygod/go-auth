@@ -1,7 +1,6 @@
 package configs
 
 import (
-	"errors"
 	"log"
 	"os"
 	"strconv"
@@ -9,11 +8,10 @@ import (
 
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
-type SMTP struct {
+type SMTPConfig struct {
 	Host     string
 	Port     int
 	Username string
@@ -30,13 +28,11 @@ type Config struct {
 	Database                 DBConfig
 	AccessJwt                JwtConfig
 	RefreshJwt               JwtConfig
-	Mail                     SMTP
+	Mail                     SMTPConfig
 }
 
 type DBConfig struct {
-	Use         string
 	PostgresDSN string
-	SqliteDSN   string
 }
 
 var config Config
@@ -72,11 +68,9 @@ func LoadConfig() {
 		AccessJwt:                access,
 		RefreshJwt:               refresh,
 		Database: DBConfig{
-			Use:         os.Getenv("USE_DATABASE"),
 			PostgresDSN: os.Getenv("POSTGRES_DSN"),
-			SqliteDSN:   os.Getenv("SQLITE_DSN"),
 		},
-		Mail: SMTP{
+		Mail: SMTPConfig{
 			Host:     os.Getenv("SMTP_HOST"),
 			Port:     smtpPort,
 			Username: os.Getenv("SMTP_USERNAME"),
@@ -100,13 +94,6 @@ func loadJWTConfig(prefix string) (c JwtConfig, e error) {
 	return c, e
 }
 
-func (d DBConfig) GetDialector() (dialector gorm.Dialector, err error) {
-	if d.Use == "sqlite" {
-		dialector = sqlite.Open(d.SqliteDSN)
-	} else if d.Use == "postgres" {
-		dialector = postgres.Open(d.PostgresDSN)
-	} else {
-		err = errors.New("invalid database")
-	}
-	return dialector, err
+func (d DBConfig) GetDialector() gorm.Dialector {
+	return postgres.Open(d.PostgresDSN)
 }

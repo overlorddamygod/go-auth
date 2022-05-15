@@ -5,12 +5,14 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
+	"github.com/google/uuid"
+
 	"github.com/overlorddamygod/go-auth/configs"
 )
 
 type CustomClaims struct {
-	UserID uint   `json:"user_id"`
-	Email  string `json:"email"`
+	UserID uuid.UUID `json:"user_id"`
+	Email  string    `json:"email"`
 	jwt.StandardClaims
 }
 

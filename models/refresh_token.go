@@ -1,15 +1,15 @@
 package models
 
 import (
-	"gorm.io/gorm"
+	"github.com/google/uuid"
 )
 
 type RefreshToken struct {
-	gorm.Model
+	Basic
 	Token     string
 	Revoked   bool `gorm:"default:false"`
 	UserAgent string
 	IP        string
-	UserID    uint
+	UserID    uuid.UUID
 	User      User `gorm:"foreignKey:UserID"`
 }

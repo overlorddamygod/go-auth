@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/overlorddamygod/go-auth/configs"
 	"github.com/overlorddamygod/go-auth/mailer"
 	"github.com/overlorddamygod/go-auth/utils"
@@ -15,7 +16,7 @@ import (
 )
 
 type User struct {
-	gorm.Model
+	Basic
 	Name     string `validate:"required,min=3" binding:"required"`
 	Email    string `gorm:"unique" validate:"required,email"`
 	Password string `validate:"required,min=6,max=20"`
@@ -316,9 +317,9 @@ func NewUser(name string, email string, password string) User {
 }
 
 type SanitizedUser struct {
-	ID    uint   `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	ID    uuid.UUID `json:"id"`
+	Name  string    `json:"name"`
+	Email string    `json:"email"`
 }
 
 func (u *User) SanitizeUser() SanitizedUser {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
+	"github.com/google/uuid"
 	"github.com/overlorddamygod/go-auth/models"
 	"github.com/overlorddamygod/go-auth/utils"
 	"github.com/overlorddamygod/go-auth/utils/response"
@@ -34,7 +35,7 @@ func (a *AuthController) RefreshToken(c *gin.Context) {
 		return
 	}
 
-	userID := uint(claims["user_id"].(float64))
+	userID := claims["user_id"].(uuid.UUID)
 	email := claims["email"].(string)
 
 	var dbUser models.User

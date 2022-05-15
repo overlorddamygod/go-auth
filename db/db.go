@@ -9,11 +9,7 @@ import (
 var db *gorm.DB
 
 func Init() {
-	dialector, err := configs.GetConfig().Database.GetDialector()
-
-	if err != nil {
-		panic(err)
-	}
+	dialector := configs.GetConfig().Database.GetDialector()
 
 	dbCon, err := gorm.Open(dialector, &gorm.Config{})
 

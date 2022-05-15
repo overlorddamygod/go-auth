@@ -1,3 +1,6 @@
 dev:
-	rm -rf database.db
 	go run main.go
+build:
+	go build
+start: build
+	./go-auth

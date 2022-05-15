@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -44,9 +45,13 @@ func (a *AuthController) RequestPasswordRecovery(c *gin.Context) {
 		response.Unauthorized(c, err.Error())
 		return
 	}
-
+	fmt.Println(resetCode)
 	a.mailer.SendPasswordRecoveryMail(dbUser.Email, dbUser.Name, resetCode)
 	response.Ok(c, "recovery email sent")
+}
+
+type ResetParams struct {
+	Password string
 }
 
 func (a *AuthController) PasswordReset(c *gin.Context) {
@@ -82,7 +87,7 @@ func (a *AuthController) PasswordReset(c *gin.Context) {
 	}
 
 	// get password from body
-	var params SignInParams
+	var params ResetParams
 	c.Bind(&params)
 
 	err = dbUser.ResetPasswordWithToken(a.db, params.Password)
