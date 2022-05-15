@@ -1,42 +1,36 @@
 package auth
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
 	"github.com/overlorddamygod/go-auth/models"
 	"github.com/overlorddamygod/go-auth/utils"
+	"github.com/overlorddamygod/go-auth/utils/response"
+	"gorm.io/gorm"
 )
 
 func (a *AuthController) RefreshToken(c *gin.Context) {
 	var refreshToken string = c.GetHeader("X-Refresh-Token")
 
 	if refreshToken == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   true,
-			"message": "refresh token required",
-		})
+		response.BadRequest(c, "refresh token required")
 		return
 	}
 
 	token, err := utils.JwtRefreshTokenVerify(refreshToken)
 
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error":   true,
-			"message": "refresh token invalid",
-		})
+		response.Unauthorized(c, "refresh token invalid")
 		return
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 
 	if !ok || !token.Valid {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error":   true,
-			"message": "refresh token invalid",
-		})
+		response.Unauthorized(c, "refresh token invalid")
 		return
 	}
 
@@ -47,18 +41,16 @@ func (a *AuthController) RefreshToken(c *gin.Context) {
 	result := a.db.First(&refreshTokenModel, "token = ?", refreshToken)
 
 	if result.Error != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error":   true,
-			"message": "refresh token expired",
-		})
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			response.NotFound(c, "refresh token invalid")
+			return
+		}
+		response.ServerError(c, "server error")
 		return
 	}
 
 	if refreshTokenModel.Revoked {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error":   true,
-			"message": "refresh token revoked",
-		})
+		response.Unauthorized(c, "refresh token revoked")
 		return
 	}
 
@@ -68,14 +60,10 @@ func (a *AuthController) RefreshToken(c *gin.Context) {
 	})
 
 	if aTerr != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   true,
-			"message": "failed to refresh token",
-		})
+		response.ServerError(c, "failed to refresh token")
 		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{
+	response.WithCustomStatusAndMessage(c, http.StatusOK, gin.H{
 		"error":        false,
 		"access-token": accessToken,
 	})

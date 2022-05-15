@@ -1,6 +1,7 @@
 package mailer
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/overlorddamygod/go-auth/configs"
@@ -57,6 +58,28 @@ func (m *Mailer) Send(params MailParams) error {
 	return email.Send(m.client)
 }
 
+// send password recovery mail
+func (m *Mailer) SendPasswordRecoveryMail(email string, name string, code string) error {
+	if email == "" {
+		return errors.New("email required")
+	}
+
+	body := `
+	<h1>Hi %s,</h1>
+	<br>
+	<p>You have requested to reset your password. Here is the code below to reset your password.</p>
+	<p>Code: %s</p>
+	<br>
+	<div>Thanks! – The Go Auth team</div>
+	`
+
+	return m.Send(MailParams{
+		To:      email,
+		Subject: "Password recovery",
+		Body:    fmt.Sprintf(body, name, code),
+	})
+}
+
 func (m *Mailer) SendConfirmationMail(email string, name string, link string) error {
 	if email == "" {
 		return fmt.Errorf("email is empty")
@@ -70,12 +93,11 @@ func (m *Mailer) SendConfirmationMail(email string, name string, link string) er
 	<br>
 	<div>Thanks! – The Go Auth team</div>
 	`
-	err := m.Send(MailParams{
+	return m.Send(MailParams{
 		To:      email,
 		Subject: "Confirm your account",
 		Body:    fmt.Sprintf(body, name, link),
 	})
-	return err
 }
 
 func (m *Mailer) SendMagicLink(email string, name string, link string) error {
@@ -92,10 +114,9 @@ func (m *Mailer) SendMagicLink(email string, name string, link string) error {
 	<div>Thanks! – The Go Auth team</div>
 	`
 
-	err := m.Send(MailParams{
+	return m.Send(MailParams{
 		To:      email,
 		Subject: "Magic link",
 		Body:    fmt.Sprintf(body, name, link),
 	})
-	return err
 }

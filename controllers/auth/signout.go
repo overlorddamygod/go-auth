@@ -1,38 +1,33 @@
 package auth
 
 import (
-	"fmt"
-	"net/http"
+	"errors"
 
 	"github.com/gin-gonic/gin"
 	"github.com/overlorddamygod/go-auth/models"
+	"github.com/overlorddamygod/go-auth/utils/response"
+	"gorm.io/gorm"
 )
 
 func (a *AuthController) SignOut(c *gin.Context) {
 	var refreshToken string = c.GetHeader("X-Refresh-Token")
 
 	if refreshToken == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   true,
-			"message": "refresh token required",
-		})
+		response.BadRequest(c, "refresh token required")
 		return
 	}
 
 	// delete refresh token
 	result := a.db.Where("token = ?", refreshToken).Delete(&models.RefreshToken{})
-	fmt.Println(result.Error)
 
 	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   true,
-			"message": "failed to sign out",
-		})
+		// check if the error is record not found
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			response.NotFound(c, "refresh token not found")
+			return
+		}
+		response.ServerError(c, "failed to sign out")
 		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"error":   false,
-		"message": "successfully signed out",
-	})
+	response.Ok(c, "successfully signed out")
 }

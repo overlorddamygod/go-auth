@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/overlorddamygod/go-auth/models"
 	"github.com/overlorddamygod/go-auth/utils"
+	"github.com/overlorddamygod/go-auth/utils/response"
 	"gorm.io/gorm"
 )
 
@@ -24,18 +25,13 @@ func (a *AuthController) SignIn(c *gin.Context) {
 	loginType := c.Query("type")
 
 	if params.Email == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   true,
-			"message": "email is required",
-		})
+		response.BadRequest(c, "email is required")
 		return
 	}
 
 	if loginType == "email" && params.Password == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   true,
-			"message": "password is required",
-		})
+		response.BadRequest(c, "password is required")
+		return
 	}
 
 	var dbUser models.User
@@ -43,16 +39,10 @@ func (a *AuthController) SignIn(c *gin.Context) {
 
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error":   true,
-				"message": "email doesnot exist",
-			})
+			response.NotFound(c, "email doesnot exist")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   true,
-			"message": "server error",
-		})
+		response.ServerError(c, "server error")
 		return
 	}
 
@@ -61,10 +51,11 @@ func (a *AuthController) SignIn(c *gin.Context) {
 		res, code, err := dbUser.SignInWithEmail(params.Password, a.db, c)
 
 		if err != nil {
-			c.JSON(code, gin.H{
+			response.WithCustomStatusAndMessage(c, code, gin.H{
 				"error":   true,
 				"message": err.Error(),
 			})
+			return
 		}
 
 		c.JSON(http.StatusOK, res)
@@ -72,7 +63,7 @@ func (a *AuthController) SignIn(c *gin.Context) {
 		res, code, err := dbUser.GenerateMagicLink(c, a.db, a.mailer)
 
 		if err != nil {
-			c.JSON(code, gin.H{
+			response.WithCustomStatusAndMessage(c, code, gin.H{
 				"error":   true,
 				"message": err.Error(),
 			})
@@ -80,10 +71,7 @@ func (a *AuthController) SignIn(c *gin.Context) {
 
 		c.JSON(http.StatusOK, res)
 	default:
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   true,
-			"message": "invalid login type",
-		})
+		response.BadRequest(c, "invalid login type")
 	}
 }
 
@@ -93,22 +81,19 @@ func (a *AuthController) VerifyLogin(c *gin.Context) {
 	redirectTo := c.Query("redirect_to")
 
 	if token == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   true,
-			"message": "token required",
-		})
+		response.BadRequest(c, "token required")
 		return
 	}
 
 	switch loginType {
 	case "magiclink":
+		if redirectTo == "" {
+			response.BadRequest(c, "redirect url required")
+		}
 		token, err := utils.Decrypt(token)
 
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   true,
-				"message": "invalid token",
-			})
+			response.Unauthorized(c, "invalid token")
 			return
 		}
 		var dbUser models.User
@@ -116,89 +101,39 @@ func (a *AuthController) VerifyLogin(c *gin.Context) {
 
 		if result.Error != nil {
 			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-				c.JSON(http.StatusUnauthorized, gin.H{
-					"error":   true,
-					"message": "invalid token",
-				})
+				response.Unauthorized(c, "invalid token")
 				return
 			}
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error":   true,
-				"message": "server error",
-			})
+			response.ServerError(c, "server error")
 			return
 		}
 
 		if dbUser.IsConfirmed() {
 			if time.Since(dbUser.TokenSentAt).Hours() > 1 {
-				c.JSON(http.StatusUnauthorized, gin.H{
-					"error":   true,
-					"message": "token expired",
-				})
+				response.Unauthorized(c, "token expired")
 				return
 			}
 			tokenMap, err := dbUser.GenerateAccessRefreshToken(c, a.db)
 
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error":   true,
-					"message": "server error",
-				})
+				response.ServerError(c, "server error")
 				return
 			}
 
-			if redirectTo != "" {
-				dbUser.Token = ""
-				dbUser.TokenSentAt = time.Time{}
-				result := a.db.Save(&dbUser)
+			dbUser.Token = ""
+			dbUser.TokenSentAt = time.Time{}
+			result := a.db.Save(&dbUser)
 
-				if result.Error != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{
-						"error":   true,
-						"message": "server error",
-					})
-					return
-				}
-
-				redirectTo = fmt.Sprintf("%s?type=magiclink&access_token=%s&refresh_token=%s", redirectTo, tokenMap["accessToken"], tokenMap["refreshToken"])
-				c.Redirect(http.StatusFound, redirectTo)
-			} else {
-				c.JSON(http.StatusBadRequest, gin.H{
-					"error":   true,
-					"message": "redirect url not defined",
-				})
+			if result.Error != nil {
+				response.ServerError(c, "server error")
 				return
 			}
+
+			redirectTo = fmt.Sprintf("%s?type=magiclink&access_token=%s&refresh_token=%s", redirectTo, tokenMap["accessToken"], tokenMap["refreshToken"])
+			c.Redirect(http.StatusFound, redirectTo)
 		}
 	default:
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   true,
-			"message": "invalid login type",
-		})
+		response.BadRequest(c, "invalid login type")
 		return
 	}
-
-	// accesstoken := c.GetHeader("X-Access-Token")
-
-	// if accesstoken == "" {
-	// 	c.JSON(http.StatusBadRequest, gin.H{
-	// 		"error":   true,
-	// 		"message": "access token required",
-	// 	})
-	// 	return
-	// }
-
-	// _, err := utils.JwtAccessTokenVerify(accesstoken)
-
-	// if err != nil {
-	// 	c.JSON(http.StatusUnauthorized, gin.H{
-	// 		"error":   true,
-	// 		"message": "access token invalid",
-	// 	})
-	// 	return
-	// }
-
-	// c.JSON(http.StatusOK, gin.H{
-	// 	"error": false,
-	// })
 }

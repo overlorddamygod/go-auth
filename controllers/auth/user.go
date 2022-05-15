@@ -1,20 +1,20 @@
 package auth
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/overlorddamygod/go-auth/models"
+	"github.com/overlorddamygod/go-auth/utils/response"
+	"gorm.io/gorm"
 )
 
 func (a *AuthController) GetMe(c *gin.Context) {
 	userId, exists := c.Get("user_id")
 
 	if !exists {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   true,
-			"message": "user id is required",
-		})
+		response.BadRequest(c, "user id is required")
 		return
 	}
 
@@ -23,14 +23,15 @@ func (a *AuthController) GetMe(c *gin.Context) {
 	result := a.db.First(&user, "id = ?", userId)
 
 	if result.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error":   true,
-			"message": "user not found",
-		})
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			response.BadRequest(c, "user not found")
+			return
+		}
+		response.ServerError(c, "server error")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	response.WithCustomStatusAndMessage(c, http.StatusOK, gin.H{
 		"error": false,
 		"user":  user.SanitizeUser(),
 	})

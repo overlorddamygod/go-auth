@@ -2,13 +2,13 @@ package auth
 
 import (
 	"errors"
-	"net/http"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/overlorddamygod/go-auth/models"
 	"github.com/overlorddamygod/go-auth/utils"
+	"github.com/overlorddamygod/go-auth/utils/response"
 	"gorm.io/gorm"
 )
 
@@ -21,10 +21,7 @@ func (a *AuthController) RequestPasswordRecovery(c *gin.Context) {
 	c.Bind(&params)
 
 	if strings.TrimSpace(params.Email) == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   true,
-			"message": "email address required",
-		})
+		response.BadRequest(c, "email address required")
 		return
 	}
 
@@ -33,45 +30,35 @@ func (a *AuthController) RequestPasswordRecovery(c *gin.Context) {
 	result := a.db.First(&dbUser, "email = ?", params.Email)
 
 	if result.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error":   true,
-			"message": "email doesnot exist",
-		})
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			response.NotFound(c, "email address not found")
+			return
+		}
+		response.ServerError(c, "server error")
 		return
 	}
 
 	resetCode, err := dbUser.GeneratePasswordRecoveryToken(a.db)
 
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error":   true,
-			"message": err.Error(),
-		})
+		response.Unauthorized(c, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"token": false,
-		"code":  resetCode,
-	})
+	a.mailer.SendPasswordRecoveryMail(dbUser.Email, dbUser.Name, resetCode)
+	response.Ok(c, "recovery email sent")
 }
 
 func (a *AuthController) PasswordReset(c *gin.Context) {
 	token := c.Query("token")
 	if token == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   true,
-			"message": "invalid token",
-		})
+		response.BadRequest(c, "invalid token")
 		return
 	}
 	token, err := utils.Decrypt(token)
 
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error":   true,
-			"message": "invalid token",
-		})
+		response.Unauthorized(c, "invalid token")
 		return
 	}
 
@@ -81,25 +68,16 @@ func (a *AuthController) PasswordReset(c *gin.Context) {
 
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   true,
-				"message": "invalid token",
-			})
+			response.Unauthorized(c, "invalid token")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   true,
-			"message": "server error",
-		})
+		response.ServerError(c, "server error")
 		return
 	}
 
 	// check if reset token is between 1 day
 	if time.Since(dbUser.PasswordResetTokenAt).Hours() > 24 {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error":   true,
-			"message": "token expired",
-		})
+		response.Unauthorized(c, "token expired")
 		return
 	}
 
@@ -110,14 +88,9 @@ func (a *AuthController) PasswordReset(c *gin.Context) {
 	err = dbUser.ResetPasswordWithToken(a.db, params.Password)
 
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error":   true,
-			"message": err.Error(),
-		})
+		response.Unauthorized(c, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"error": false,
-	})
+	response.Ok(c, "password reset successfully")
 }

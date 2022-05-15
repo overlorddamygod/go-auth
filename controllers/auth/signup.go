@@ -2,11 +2,11 @@ package auth
 
 import (
 	"fmt"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/overlorddamygod/go-auth/configs"
 	"github.com/overlorddamygod/go-auth/models"
+	"github.com/overlorddamygod/go-auth/utils/response"
 )
 
 type SignUpParams struct {
@@ -24,10 +24,7 @@ func (a *AuthController) SignUp(c *gin.Context) {
 	result := a.db.Create(&user)
 
 	if result.Error != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   true,
-			"message": result.Error.Error(),
-		})
+		response.BadRequest(c, result.Error.Error())
 		return
 	}
 	if configs.GetConfig().RequireConfirmation {
@@ -35,10 +32,7 @@ func (a *AuthController) SignUp(c *gin.Context) {
 		fmt.Println("MAIL: ", err)
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
-		"error": false,
-		"user":  user.SanitizeUser(),
-	})
+	response.Created(c, "account created")
 }
 
 // confirm account
@@ -46,10 +40,7 @@ func (a *AuthController) ConfirmAccount(c *gin.Context) {
 	token := c.Query("token")
 
 	if token == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   true,
-			"message": "token required",
-		})
+		response.BadRequest(c, "token required")
 		return
 	}
 
@@ -58,22 +49,14 @@ func (a *AuthController) ConfirmAccount(c *gin.Context) {
 	result := a.db.First(&dbUser, "confirmation_token = ?", token)
 
 	if result.Error != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error":   true,
-			"message": "invalid token",
-		})
+		response.Unauthorized(c, "invalid token")
 		return
 	}
 
 	if err := dbUser.ConfirmAccount(a.db); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error":   true,
-			"message": "failed to confirm account",
-		})
+		response.Unauthorized(c, "failed to confirm account")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"error": false,
-	})
+	response.Ok(c, "account confirmed")
 }

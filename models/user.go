@@ -75,9 +75,13 @@ func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
 		return errors.New("email already exists")
 	}
 
+	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return errors.New("server error")
+	}
+
 	u.Password, err = utils.HashPassword(u.Password)
 	if err != nil {
-		return err
+		return errors.New("server error")
 	}
 	return nil
 }
@@ -253,6 +257,12 @@ func (u *User) SignInWithEmail(password string, db *gorm.DB, c *gin.Context) (ob
 }
 
 func (u *User) GenerateMagicLink(c *gin.Context, db *gorm.DB, mailer *mailer.Mailer) (obj interface{}, code int, err error) {
+	redirect_to := c.Query("redirect_to")
+
+	if redirect_to == "" {
+		return nil, http.StatusBadRequest, errors.New("redirect url is required")
+	}
+
 	// sign in with magic link
 	randomString, err := utils.GenerateRandomString(9)
 
@@ -269,7 +279,6 @@ func (u *User) GenerateMagicLink(c *gin.Context, db *gorm.DB, mailer *mailer.Mai
 	}
 
 	u.TokenSentAt = time.Now()
-	redirect_to := c.Query("redirect_to")
 
 	magicLink := fmt.Sprintf("http://localhost:8080/api/v1/auth/verify?type=%s&token=%s&redirect_to=%s", "magiclink", encryptedToken, redirect_to)
 	err = db.Transaction(func(tx *gorm.DB) error {
@@ -279,9 +288,9 @@ func (u *User) GenerateMagicLink(c *gin.Context, db *gorm.DB, mailer *mailer.Mai
 
 		println(magicLink)
 
-		// if err := mailer.SendMagicLink(u.Email, u.Name, magicLink); err != nil {
-		// 	return err
-		// }
+		if err := mailer.SendMagicLink(u.Email, u.Name, magicLink); err != nil {
+			return err
+		}
 
 		return nil
 	})
@@ -295,8 +304,6 @@ func (u *User) GenerateMagicLink(c *gin.Context, db *gorm.DB, mailer *mailer.Mai
 		"message": "Succesfully sent magic link to your email",
 	}, http.StatusOK, nil
 }
-
-// func (U *u) signInWith
 
 func NewUser(name string, email string, password string) User {
 	return User{

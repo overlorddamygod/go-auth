@@ -1,11 +1,10 @@
 package middlewares
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
 	"github.com/overlorddamygod/go-auth/utils"
+	"github.com/overlorddamygod/go-auth/utils/response"
 )
 
 func IsLoggedIn() gin.HandlerFunc {
@@ -13,22 +12,15 @@ func IsLoggedIn() gin.HandlerFunc {
 		var accessToken string = c.GetHeader("X-Access-Token")
 
 		if accessToken == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   true,
-				"message": "access token is required",
-			})
+			response.Unauthorized(c, "access token is required")
 			c.Abort()
-
 			return
 		}
 
 		token, err := utils.JwtAccessTokenVerify(accessToken)
 
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   true,
-				"message": "access token is invalid",
-			})
+			response.Unauthorized(c, "access token is invalid")
 			c.Abort()
 			return
 		}
@@ -36,10 +28,7 @@ func IsLoggedIn() gin.HandlerFunc {
 		claims, ok := token.Claims.(jwt.MapClaims)
 
 		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   true,
-				"message": "access token is invalid",
-			})
+			response.Unauthorized(c, "access token is invalid")
 			c.Abort()
 			return
 		}
