@@ -1,0 +1,35 @@
+name: Go
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: GoAuthENV
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.16
+
+    - name: Build
+      run: go build -v ./...
+
+    - name: Test
+      env:
+        JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
+        JWT_ACCESS_EXPIRATION_HOURS: ${{ secrets.JWT_ACCESS_EXPIRATION_HOURS }}
+        JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+        JWT_REFRESH_EXPIRATION_HOURS: ${{ secrets.JWT_REFRESH_EXPIRATION_HOURS }}
+        POSTGRES_DSN: ${{ secrets.POSTGRES_DSN }}
+        SMTP_HOST: ${{ secrets.SMTP_HOST }}
+        SMTP_PORT: ${{ secrets.SMTP_PORT }}
+        SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+        SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      run: go test -v ./...

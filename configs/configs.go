@@ -41,19 +41,27 @@ func Load(envPath string) {
 	err := godotenv.Load(envPath)
 
 	if err != nil {
-		log.Fatalf("Error loading .env file")
+		log.Println("Error loading .env file")
 	}
 
 	access, err := loadJWTConfig("JWT_ACCESS")
 
 	if err != nil {
-		log.Fatalf("Error loading config")
+		log.Println("Error loading access jwt config using default")
+		access = JwtConfig{
+			Secret:     []byte("my_access_token_secret_key"),
+			Expiration: time.Hour * time.Duration(1),
+		}
 	}
 
 	refresh, err := loadJWTConfig("JWT_REFRESH")
 
 	if err != nil {
-		log.Fatalf("Error loading config")
+		log.Println("Error loading refresh config using default")
+		refresh = JwtConfig{
+			Secret:     []byte("my_refresh_token_secret_key"),
+			Expiration: time.Hour * time.Duration(24),
+		}
 	}
 
 	smtpPort, err := strconv.Atoi(os.Getenv("SMTP_PORT"))
