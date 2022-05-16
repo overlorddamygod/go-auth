@@ -4,3 +4,5 @@ build:
 	go build
 start: build
 	./go-auth
+test:
+	go test ./...

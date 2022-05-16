@@ -37,8 +37,8 @@ type DBConfig struct {
 
 var config Config
 
-func LoadConfig() {
-	err := godotenv.Load(".env")
+func Load(envPath string) {
+	err := godotenv.Load(envPath)
 
 	if err != nil {
 		log.Fatalf("Error loading .env file")
@@ -77,6 +77,10 @@ func LoadConfig() {
 			Password: os.Getenv("SMTP_PASSWORD"),
 		},
 	}
+}
+
+func LoadConfig() {
+	Load(".env")
 }
 
 func GetConfig() Config {

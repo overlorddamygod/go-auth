@@ -21,6 +21,17 @@ func Init() {
 	db.AutoMigrate(&models.RefreshToken{})
 }
 
+func InitForTest() {
+	dialector := configs.GetConfig().Database.GetDialector()
+
+	dbCon, err := gorm.Open(dialector, &gorm.Config{})
+
+	if err != nil {
+		panic("failed to connect database")
+	}
+	db = dbCon
+}
+
 func GetDB() *gorm.DB {
 	return db
 }

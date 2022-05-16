@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/overlorddamygod/go-auth/models"
+	"github.com/overlorddamygod/go-auth/utils"
 	"github.com/overlorddamygod/go-auth/utils/response"
 	"gorm.io/gorm"
 )
@@ -14,6 +15,12 @@ func (a *AuthController) SignOut(c *gin.Context) {
 
 	if refreshToken == "" {
 		response.BadRequest(c, "refresh token required")
+		return
+	}
+
+	_, err := utils.JwtRefreshTokenVerify(refreshToken)
+	if err != nil {
+		response.BadRequest(c, "invalid refresh token")
 		return
 	}
 

@@ -3,6 +3,10 @@ package server
 import (
 	"log"
 	"os"
+
+	"github.com/gin-gonic/gin"
+	"github.com/overlorddamygod/go-auth/configs"
+	"github.com/overlorddamygod/go-auth/db"
 )
 
 func Init() {
@@ -19,4 +23,11 @@ func Init() {
 	} else {
 		log.Println("server started on port " + PORT)
 	}
+}
+
+func InitForTest() *gin.Engine {
+	configs.Load("../../.env")
+	db.InitForTest()
+	gin.SetMode(gin.ReleaseMode)
+	return NewRouter()
 }

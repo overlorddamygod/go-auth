@@ -32,6 +32,7 @@ type User struct {
 	ConfirmationTokenAt time.Time
 	Confirmed           bool `gorm:"default:false"`
 	ConfirmedAt         time.Time
+	RefreshToken        []RefreshToken `gorm:"one2many;constraint:OnDelete:CASCADE"`
 }
 
 func (u *User) BeforeCreate(tx *gorm.DB) (err error) {

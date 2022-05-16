@@ -27,6 +27,15 @@ user@main:~$ go build
 user@main:~$ GIN_MODE=release ./go-auth
 ```
 After running the commands, Authentication server runs on port `8080`
+___
+### **Test API**
+```console
+user@main:~$ make test
+```
+`or`
+```console
+user@main:~$ go test ./...
+```
 ## API Endpoints
 ---
 ## Sign up new user
