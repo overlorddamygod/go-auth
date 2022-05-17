@@ -1,8 +1,8 @@
 dev:
-	go run main.go
+	go run cmd/main.go
 build:
-	go build
+	go build cmd/main.go
 start: build
-	./go-auth
+	./main
 test:
 	go test ./...

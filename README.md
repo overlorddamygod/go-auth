@@ -13,18 +13,18 @@ ___
 
 Runs server without building
 ``` console
-user@main:~$ go run main.go
+user@main:~$ go run cmd/main.go
 ```
 Build and run server
 ``` console
-user@main:~$ go build
-user@main:~$ ./go-auth
+user@main:~$ go build cmd/main.go
+user@main:~$ ./main
 ```
 ___
 #### Release build
 ``` console
-user@main:~$ go build
-user@main:~$ GIN_MODE=release ./go-auth
+user@main:~$ go build cmd/main.go
+user@main:~$ GIN_MODE=release ./main
 ```
 After running the commands, Authentication server runs on port `8080`
 ___
