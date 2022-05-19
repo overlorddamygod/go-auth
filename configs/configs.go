@@ -29,6 +29,8 @@ type Config struct {
 	AccessJwt                JwtConfig
 	RefreshJwt               JwtConfig
 	Mail                     SMTPConfig
+	TokenSecret1             []byte
+	TokenSecret2             []byte
 }
 
 type DBConfig struct {
@@ -75,6 +77,8 @@ func Load(envPath string) {
 			Username: getEnv("SMTP_USERNAME", defaultConfig.Mail.Username),
 			Password: getEnv("SMTP_PASSWORD", defaultConfig.Mail.Password),
 		},
+		TokenSecret1: []byte(getEnv("TOKEN_SECRET1", configMap["TokenSecret1"])),
+		TokenSecret2: []byte(getEnv("TOKEN_SECRET2", configMap["TokenSecret2"])),
 	}
 }
 
@@ -97,8 +101,8 @@ func getEnv(key, fallback string) string {
 }
 
 func loadJWTConfig(prefix string) (c JwtConfig, e error) {
-	secret := getEnv(prefix+"_SECRET", jwtMap[prefix+"_SECRET"])
-	expiration, err := strconv.Atoi(getEnv(prefix+"_EXPIRATION_HOURS", jwtMap[prefix+"_EXPIRATION_HOURS"]))
+	secret := getEnv(prefix+"_SECRET", configMap[prefix+"_SECRET"])
+	expiration, err := strconv.Atoi(getEnv(prefix+"_EXPIRATION_HOURS", configMap[prefix+"_EXPIRATION_HOURS"]))
 	c = JwtConfig{
 		Secret: []byte(secret),
 	}
@@ -107,21 +111,23 @@ func loadJWTConfig(prefix string) (c JwtConfig, e error) {
 	return c, e
 }
 
-var jwtMap = map[string]string{
+var configMap = map[string]string{
 	"JWT_ACCESS_SECRET":            "my_access_token_secret_key",
 	"JWT_ACCESS_EXPIRATION_HOURS":  "1",
 	"JWT_REFRESH_SECRET":           "my_refresh_token_secret_key",
 	"JWT_REFRESH_EXPIRATION_HOURS": "24",
+	"TokenSecret1":                 "PQNFuUjXBfOBbDcc8IlJlqL4",
+	"TokenSecret2":                 "Qjb2MwC5aPTA26gc",
 }
 
 var defaultConfig = Config{
 	RequireEmailConfirmation: false,
 	AccessJwt: JwtConfig{
-		Secret:     []byte(jwtMap["JWT_ACCESS_SECRET"]),
+		Secret:     []byte(configMap["JWT_ACCESS_SECRET"]),
 		Expiration: time.Hour * time.Duration(1),
 	},
 	RefreshJwt: JwtConfig{
-		Secret:     []byte(jwtMap["JWT_REFRESH_SECRET"]),
+		Secret:     []byte(configMap["JWT_REFRESH_SECRET"]),
 		Expiration: time.Hour * time.Duration(24),
 	},
 	Database: DBConfig{
@@ -133,6 +139,8 @@ var defaultConfig = Config{
 		Username: "qwr23423twggggdf8",
 		Password: "Sasdasdasd",
 	},
+	TokenSecret1: []byte(configMap["TokenSecret1"]),
+	TokenSecret2: []byte(configMap["TokenSecret2"]),
 }
 
 func (d DBConfig) GetDialector() gorm.Dialector {

@@ -4,11 +4,9 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"encoding/base64"
+
+	"github.com/overlorddamygod/go-auth/configs"
 )
-
-var bytes = []byte{35, 46, 57, 24, 85, 35, 24, 74, 87, 35, 88, 98, 66, 32, 14, 05}
-
-const MySecret string = "abc&1*~#^2^#s0^=)^^7%b34"
 
 func Encode(b []byte) string {
 	return base64.StdEncoding.EncodeToString(b)
@@ -24,7 +22,10 @@ func Decode(s string) ([]byte, error) {
 
 // Encrypt method is to encrypt or hide any classified text
 func Encrypt(text string) (string, error) {
-	block, err := aes.NewCipher([]byte(MySecret))
+	mySecret := configs.GetConfig().TokenSecret1
+	bytes := configs.GetConfig().TokenSecret2
+
+	block, err := aes.NewCipher(mySecret)
 	if err != nil {
 		return "", err
 	}
@@ -37,7 +38,10 @@ func Encrypt(text string) (string, error) {
 
 // Decrypt method is to extract back the encrypted text
 func Decrypt(text string) (string, error) {
-	block, err := aes.NewCipher([]byte(MySecret))
+	mySecret := configs.GetConfig().TokenSecret1
+	bytes := configs.GetConfig().TokenSecret2
+
+	block, err := aes.NewCipher(mySecret)
 	if err != nil {
 		return "", err
 	}
