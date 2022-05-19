@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -81,6 +82,12 @@ func (a *AuthController) RefreshToken(c *gin.Context) {
 	if aTerr != nil {
 		response.ServerError(c, "failed to refresh token")
 		return
+	}
+
+	result = a.logger.Log(models.TOKEN_REFRESH, dbUser.Email)
+
+	if result.Error != nil {
+		fmt.Println("Error Logging: ", models.TOKEN_REFRESH, result.Error)
 	}
 
 	response.WithCustomStatusAndMessage(c, http.StatusOK, gin.H{

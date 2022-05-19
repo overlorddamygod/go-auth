@@ -63,6 +63,12 @@ func (a *AuthController) SignIn(c *gin.Context) {
 			return
 		}
 
+		result = a.logger.Log(models.SIGNIN_EMAIL, dbUser.Email)
+
+		if result.Error != nil {
+			fmt.Println("Error Logging: ", models.SIGNIN_EMAIL, result.Error)
+		}
+
 		c.JSON(http.StatusOK, res)
 	case "magiclink":
 		res, code, err := dbUser.GenerateMagicLink(c, a.db, a.mailer)
@@ -132,6 +138,12 @@ func (a *AuthController) VerifyLogin(c *gin.Context) {
 			if result.Error != nil {
 				response.ServerError(c, "server error")
 				return
+			}
+
+			result = a.logger.Log(models.SIGNIN_MAGICLINK, dbUser.Email)
+
+			if result.Error != nil {
+				fmt.Println("Error Logging: ", models.SIGNIN_MAGICLINK, result.Error)
 			}
 
 			redirectTo = fmt.Sprintf("%s?type=magiclink&access_token=%s&refresh_token=%s", redirectTo, tokenMap["accessToken"], tokenMap["refreshToken"])

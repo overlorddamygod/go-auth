@@ -47,6 +47,13 @@ func (a *AuthController) RequestPasswordRecovery(c *gin.Context) {
 	}
 	fmt.Println(resetCode)
 	a.mailer.SendPasswordRecoveryMail(dbUser.Email, dbUser.Name, resetCode)
+
+	result = a.logger.Log(models.PASSWORD_RESET_REQUEST, dbUser.Email)
+
+	if result.Error != nil {
+		fmt.Println("Error Logging: ", models.PASSWORD_RESET_REQUEST, result.Error)
+	}
+
 	response.Ok(c, "recovery email sent")
 }
 
@@ -95,6 +102,12 @@ func (a *AuthController) PasswordReset(c *gin.Context) {
 	if err != nil {
 		response.Unauthorized(c, err.Error())
 		return
+	}
+
+	result = a.logger.Log(models.PASSWORD_RESET, dbUser.Email)
+
+	if result.Error != nil {
+		fmt.Println("Error Logging: ", models.PASSWORD_RESET, result.Error)
 	}
 
 	response.Ok(c, "password reset successfully")

@@ -31,9 +31,27 @@ func (a *AuthController) SignUp(c *gin.Context) {
 		fmt.Println("Confirmation Token: ", user.ConfirmationToken)
 		err := a.mailer.SendConfirmationMail(user.Email, user.Name, "http://localhost:8080/api/v1/auth/confirm?token="+user.ConfirmationToken)
 		fmt.Println("MAIL: ", err)
+
+		result = a.logger.Log(models.MAIL_CONFIRMATION_SENT, user.Email)
+
+		if result.Error != nil {
+			fmt.Println("Error Logging: ", models.MAIL_CONFIRMATION_SENT, result.Error)
+		}
 	}
 
-	response.Created(c, "account created")
+	result = a.logger.Log(models.SIGNUP, user.Email)
+
+	if result.Error != nil {
+		fmt.Println("Error Logging: ", models.SIGNUP, result.Error)
+	}
+
+	msg := "account created"
+
+	if configs.GetConfig().RequireEmailConfirmation {
+		msg = "account created, please check your email"
+	}
+
+	response.Created(c, msg)
 }
 
 // confirm account
@@ -57,6 +75,12 @@ func (a *AuthController) ConfirmAccount(c *gin.Context) {
 	if err := dbUser.ConfirmAccount(a.db); err != nil {
 		response.Unauthorized(c, "failed to confirm account")
 		return
+	}
+
+	result = a.logger.Log(models.MAIL_CONFIRMED, dbUser.Email)
+
+	if result.Error != nil {
+		fmt.Println("Error Logging: ", models.MAIL_CONFIRMED, result.Error)
 	}
 
 	response.Ok(c, "account confirmed")

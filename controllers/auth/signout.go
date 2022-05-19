@@ -2,8 +2,10 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt"
 	"github.com/overlorddamygod/go-auth/models"
 	"github.com/overlorddamygod/go-auth/utils"
 	"github.com/overlorddamygod/go-auth/utils/response"
@@ -18,9 +20,16 @@ func (a *AuthController) SignOut(c *gin.Context) {
 		return
 	}
 
-	_, err := utils.JwtRefreshTokenVerify(refreshToken)
+	token, err := utils.JwtRefreshTokenVerify(refreshToken)
 	if err != nil {
 		response.BadRequest(c, "invalid refresh token")
+		return
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+
+	if !ok {
+		response.ServerError(c, "failed to sign out")
 		return
 	}
 
@@ -36,5 +45,12 @@ func (a *AuthController) SignOut(c *gin.Context) {
 		response.ServerError(c, "failed to sign out")
 		return
 	}
+
+	result = a.logger.Log(models.SIGNOUT, claims["email"].(string))
+
+	if result.Error != nil {
+		fmt.Println("Error Logging: ", models.SIGNOUT, result.Error)
+	}
+
 	response.Ok(c, "successfully signed out")
 }

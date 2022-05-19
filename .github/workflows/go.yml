@@ -32,4 +32,5 @@ jobs:
         SMTP_PORT: ${{ secrets.SMTP_PORT }}
         SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
         SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+        MAIL_CONFIRMATION: ${{ secrets.MAIL_CONFIRMATION }}
       run: go test -v ./...

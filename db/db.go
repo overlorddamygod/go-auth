@@ -19,6 +19,7 @@ func Init() {
 	db = dbCon
 	db.AutoMigrate(&models.User{})
 	db.AutoMigrate(&models.RefreshToken{})
+	db.AutoMigrate(&models.Log{})
 }
 
 func InitForTest() {
