@@ -3,6 +3,7 @@ module github.com/overlorddamygod/go-auth
 go 1.17
 
 require (
+	github.com/benbjohnson/clock v1.3.0
 	github.com/gin-contrib/cors v1.3.1
 	github.com/xhit/go-simple-mail/v2 v2.11.0
 )
