@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
-	"github.com/overlorddamygod/go-auth/configs"
 	"github.com/overlorddamygod/go-auth/models"
 	"github.com/overlorddamygod/go-auth/utils/response"
 )
@@ -27,7 +26,7 @@ func (a *AuthController) SignUp(c *gin.Context) {
 		response.BadRequest(c, result.Error.Error())
 		return
 	}
-	if configs.GetConfig().RequireEmailConfirmation {
+	if a.config.RequireEmailConfirmation {
 		fmt.Println("Confirmation Token: ", user.ConfirmationToken)
 		err := a.mailer.SendConfirmationMail(user.Email, user.Name, "http://localhost:8080/api/v1/auth/confirm?token="+user.ConfirmationToken)
 		fmt.Println("MAIL: ", err)
@@ -47,7 +46,7 @@ func (a *AuthController) SignUp(c *gin.Context) {
 
 	msg := "account created"
 
-	if configs.GetConfig().RequireEmailConfirmation {
+	if a.config.RequireEmailConfirmation {
 		msg = "account created, please check your email"
 	}
 

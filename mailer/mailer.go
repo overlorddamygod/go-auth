@@ -12,12 +12,11 @@ type Mailer struct {
 	client *mail.SMTPClient
 }
 
-// new mailer
-func NewMailer() *Mailer {
+func NewMailer(config *configs.Config) *Mailer {
 	// intialized mail
 	mailServer := mail.NewSMTPClient()
 
-	mailConfig := configs.GetConfig().Mail
+	mailConfig := config.Mail
 
 	mailServer.Host = mailConfig.Host
 	mailServer.Port = mailConfig.Port

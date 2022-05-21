@@ -3,6 +3,7 @@ module github.com/overlorddamygod/go-auth
 go 1.17
 
 require (
+	github.com/benbjohnson/clock v1.3.0
 	github.com/gin-contrib/cors v1.3.1
 	github.com/xhit/go-simple-mail/v2 v2.11.0
 )
@@ -19,6 +20,11 @@ require (
 	github.com/jackc/pgtype v1.11.0 // indirect
 	github.com/jackc/pgx/v4 v4.16.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	go.uber.org/atomic v1.6.0 // indirect
+	go.uber.org/dig v1.14.0 // indirect
+	go.uber.org/fx v1.17.1 // indirect
+	go.uber.org/multierr v1.5.0 // indirect
+	go.uber.org/zap v1.16.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )
 

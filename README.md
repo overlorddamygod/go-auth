@@ -3,7 +3,13 @@
 Simple authentication api written in go inspired by [gotrue](https://github.com/netlify/gotrue)
 
 #### Requirements
-- Golang
+- [Golang](https://go.dev/)
+
+#### Libraries
+- [Gin](https://gin-gonic.com) - Go Web Framework
+- [GORM](https://gorm.io) - ORM library
+- [Uber-Fx](https://github.com/uber-go/fx) - Dependency Injection Framework
+- [Simple-Mail](https://github.com/xhit/go-simple-mail) - Mail Client
 
 ### Usage :
 Copy `sample.env` file as `.env` in the root directory and edit all the values.
