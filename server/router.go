@@ -3,6 +3,7 @@ package server
 import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/overlorddamygod/go-auth/configs"
 	authController "github.com/overlorddamygod/go-auth/controllers/auth"
 	"github.com/overlorddamygod/go-auth/db"
 	"github.com/overlorddamygod/go-auth/mailer"
@@ -12,7 +13,7 @@ import (
 func NewRouter() *gin.Engine {
 	router := gin.New()
 	router.Use(cors.New(cors.Config{
-		AllowOrigins: []string{"http://localhost:3000"},
+		AllowOrigins: configs.GetConfig().AllowOrigins,
 		AllowHeaders: []string{"content-type", "x-access-token", "x-refresh-token"},
 	}))
 	router.Use(gin.Logger())
@@ -22,8 +23,14 @@ func NewRouter() *gin.Engine {
 	{
 		authGroup := v1.Group("auth")
 		{
+			authGroup.Use(func(c *gin.Context) {
+				c.Writer.Header().Set("Content-Type", "application/json")
+				c.Next()
+			})
+
 			mailer := mailer.NewMailer()
 			auth := authController.NewAuthController(db.GetDB(), mailer)
+
 			authGroup.POST("signup", auth.SignUp)
 			authGroup.POST("signin", auth.SignIn)
 			authGroup.POST("signout", auth.SignOut)

@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -31,6 +32,7 @@ type Config struct {
 	Mail                     SMTPConfig
 	TokenSecret1             []byte
 	TokenSecret2             []byte
+	AllowOrigins             []string
 }
 
 type DBConfig struct {
@@ -64,6 +66,9 @@ func Load(envPath string) {
 		log.Println("SMTP_PORT not set, using default")
 	}
 
+	allowOrigins := getEnv("ALLOW_ORIGINS", configMap["AllowOrigins"])
+	allowOriginsArray := strings.Split(allowOrigins, " ")
+
 	config = Config{
 		RequireEmailConfirmation: getEnv("MAIL_CONFIRMATION", "0") == "1",
 		AccessJwt:                access,
@@ -79,6 +84,7 @@ func Load(envPath string) {
 		},
 		TokenSecret1: []byte(getEnv("TOKEN_SECRET1", configMap["TokenSecret1"])),
 		TokenSecret2: []byte(getEnv("TOKEN_SECRET2", configMap["TokenSecret2"])),
+		AllowOrigins: allowOriginsArray,
 	}
 }
 
@@ -118,6 +124,7 @@ var configMap = map[string]string{
 	"JWT_REFRESH_EXPIRATION_HOURS": "24",
 	"TokenSecret1":                 "PQNFuUjXBfOBbDcc8IlJlqL4",
 	"TokenSecret2":                 "Qjb2MwC5aPTA26gc",
+	"AllowOrigins":                 "http://localhost:3000",
 }
 
 var defaultConfig = Config{
@@ -141,6 +148,7 @@ var defaultConfig = Config{
 	},
 	TokenSecret1: []byte(configMap["TokenSecret1"]),
 	TokenSecret2: []byte(configMap["TokenSecret2"]),
+	AllowOrigins: []string{configMap["AllowOrigins"]},
 }
 
 func (d DBConfig) GetDialector() gorm.Dialector {
