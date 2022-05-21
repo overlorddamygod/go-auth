@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
 type SMTPConfig struct {
@@ -25,6 +23,7 @@ type JwtConfig struct {
 }
 
 type Config struct {
+	PORT                     string
 	RequireEmailConfirmation bool
 	Database                 DBConfig
 	AccessJwt                JwtConfig
@@ -39,61 +38,62 @@ type DBConfig struct {
 	PostgresDSN string
 }
 
-var config Config
+var MainConfig *Config
 
-func Load(envPath string) {
-	err := godotenv.Load(envPath)
+func NewConfig(envPath string) func() *Config {
+	return func() *Config {
+		err := godotenv.Load(envPath)
 
-	if err != nil {
-		log.Println("Error loading .env file")
-	}
+		if err != nil {
+			log.Println("Error loading .env file")
+		}
 
-	access, err := loadJWTConfig("JWT_ACCESS")
+		access, err := loadJWTConfig("JWT_ACCESS")
 
-	if err != nil {
-		log.Println("Error loading access jwt config using default")
-	}
+		if err != nil {
+			log.Println("Error loading access jwt config using default")
+		}
 
-	refresh, err := loadJWTConfig("JWT_REFRESH")
+		refresh, err := loadJWTConfig("JWT_REFRESH")
 
-	if err != nil {
-		log.Println("Error loading refresh jwt config using default")
-	}
+		if err != nil {
+			log.Println("Error loading refresh jwt config using default")
+		}
 
-	smtpPort, err := strconv.Atoi(os.Getenv("SMTP_PORT"))
+		smtpPort, err := strconv.Atoi(os.Getenv("SMTP_PORT"))
 
-	if err != nil {
-		log.Println("SMTP_PORT not set, using default")
-	}
+		if err != nil {
+			log.Println("SMTP_PORT not set, using default")
+		}
 
-	allowOrigins := getEnv("ALLOW_ORIGINS", configMap["AllowOrigins"])
-	allowOriginsArray := strings.Split(allowOrigins, " ")
+		allowOrigins := getEnv("ALLOW_ORIGINS", configMap["AllowOrigins"])
+		allowOriginsArray := strings.Split(allowOrigins, " ")
 
-	config = Config{
-		RequireEmailConfirmation: getEnv("MAIL_CONFIRMATION", "0") == "1",
-		AccessJwt:                access,
-		RefreshJwt:               refresh,
-		Database: DBConfig{
-			PostgresDSN: getEnv("POSTGRES_DSN", defaultConfig.Database.PostgresDSN),
-		},
-		Mail: SMTPConfig{
-			Host:     getEnv("SMTP_HOST", defaultConfig.Mail.Host),
-			Port:     smtpPort,
-			Username: getEnv("SMTP_USERNAME", defaultConfig.Mail.Username),
-			Password: getEnv("SMTP_PASSWORD", defaultConfig.Mail.Password),
-		},
-		TokenSecret1: []byte(getEnv("TOKEN_SECRET1", configMap["TokenSecret1"])),
-		TokenSecret2: []byte(getEnv("TOKEN_SECRET2", configMap["TokenSecret2"])),
-		AllowOrigins: allowOriginsArray,
+		config := &Config{
+			PORT:                     getEnv("PORT", defaultConfig.PORT),
+			RequireEmailConfirmation: getEnv("MAIL_CONFIRMATION", "0") == "1",
+			AccessJwt:                access,
+			RefreshJwt:               refresh,
+			Database: DBConfig{
+				PostgresDSN: getEnv("POSTGRES_DSN", defaultConfig.Database.PostgresDSN),
+			},
+			Mail: SMTPConfig{
+				Host:     getEnv("SMTP_HOST", defaultConfig.Mail.Host),
+				Port:     smtpPort,
+				Username: getEnv("SMTP_USERNAME", defaultConfig.Mail.Username),
+				Password: getEnv("SMTP_PASSWORD", defaultConfig.Mail.Password),
+			},
+			TokenSecret1: []byte(getEnv("TOKEN_SECRET1", configMap["TokenSecret1"])),
+			TokenSecret2: []byte(getEnv("TOKEN_SECRET2", configMap["TokenSecret2"])),
+			AllowOrigins: allowOriginsArray,
+		}
+		// fmt.Println(config)
+		return config
 	}
 }
 
-func LoadConfig() {
-	Load(".env")
-}
-
-func GetConfig() Config {
-	return config
+func GetConfig() *Config {
+	return MainConfig
 }
 
 func getEnv(key, fallback string) string {
@@ -128,6 +128,7 @@ var configMap = map[string]string{
 }
 
 var defaultConfig = Config{
+	PORT:                     "8080",
 	RequireEmailConfirmation: false,
 	AccessJwt: JwtConfig{
 		Secret:     []byte(configMap["JWT_ACCESS_SECRET"]),
@@ -149,8 +150,4 @@ var defaultConfig = Config{
 	TokenSecret1: []byte(configMap["TokenSecret1"]),
 	TokenSecret2: []byte(configMap["TokenSecret2"]),
 	AllowOrigins: []string{configMap["AllowOrigins"]},
-}
-
-func (d DBConfig) GetDialector() gorm.Dialector {
-	return postgres.Open(d.PostgresDSN)
 }

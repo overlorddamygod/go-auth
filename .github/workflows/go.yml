@@ -33,4 +33,6 @@ jobs:
         SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
         SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
         MAIL_CONFIRMATION: ${{ secrets.MAIL_CONFIRMATION }}
+        TOKEN_SECRET1: ${{ secrets.TOKEN_SECRET1 }}
+        TOKEN_SECRET2: ${{ secrets.TOKEN_SECRET2 }}
       run: go test -v ./...

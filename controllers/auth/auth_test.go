@@ -5,10 +5,14 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/overlorddamygod/go-auth/configs"
+	"github.com/overlorddamygod/go-auth/controllers/auth"
 	"github.com/overlorddamygod/go-auth/db"
+	"github.com/overlorddamygod/go-auth/mailer"
 	"github.com/overlorddamygod/go-auth/models"
 	"github.com/overlorddamygod/go-auth/server"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/fx"
 	"gorm.io/gorm"
 )
 
@@ -33,27 +37,39 @@ type User struct {
 }
 
 func TestAuth(t *testing.T) {
-	db := db.GetDB()
-	router := server.InitForTest()
+	var dbConn *gorm.DB
+	var router *gin.Engine
+	_ = fx.New(
+		fx.Provide(
+			configs.NewConfig("../../.env"),
+			db.NewDB,
+			mailer.NewMailer,
+			models.NewLogger,
+			auth.NewAuthController,
+			server.NewRouter,
+		),
+		fx.Populate(&dbConn),
+		fx.Populate(&router),
+		fx.Populate(&configs.MainConfig),
+		fx.Invoke(server.RegisterServer),
+	)
 
 	s := &AuthTestSuite{
-		db:     db,
+		db:     dbConn,
 		router: router,
+		user: User{
+			Name:         "test123",
+			Email:        "test123@gmail.com",
+			Password:     "test123",
+			AccessToken:  "",
+			RefreshToken: "",
+		},
 	}
 
 	suite.Run(t, s)
 }
 
 func (suite *AuthTestSuite) SetupSuite() {
-	suite.db = db.GetDB()
-	suite.user = User{
-		Name:         "test123",
-		Email:        "test123@gmail.com",
-		Password:     "test123",
-		AccessToken:  "",
-		RefreshToken: "",
-	}
-	// User for whole test suite
 	res := suite.db.Unscoped().Where("email = ?", suite.user.Email).Delete(&models.User{})
 	if res.Error != nil {
 		fmt.Println(res.Error)

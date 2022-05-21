@@ -1,49 +1,32 @@
 package server
 
 import (
-	"github.com/gin-contrib/cors"
+	"context"
+	"fmt"
+	"log"
+
 	"github.com/gin-gonic/gin"
 	"github.com/overlorddamygod/go-auth/configs"
-	authController "github.com/overlorddamygod/go-auth/controllers/auth"
-	"github.com/overlorddamygod/go-auth/db"
-	"github.com/overlorddamygod/go-auth/mailer"
-	"github.com/overlorddamygod/go-auth/middlewares"
+	"go.uber.org/fx"
 )
 
-func NewRouter() *gin.Engine {
+func NewRouter(lc fx.Lifecycle, config *configs.Config) *gin.Engine {
 	router := gin.New()
-	router.Use(cors.New(cors.Config{
-		AllowOrigins: configs.GetConfig().AllowOrigins,
-		AllowHeaders: []string{"content-type", "x-access-token", "x-refresh-token"},
-	}))
-	router.Use(gin.Logger())
-	router.Use(gin.Recovery())
 
-	v1 := router.Group("api/v1")
-	{
-		authGroup := v1.Group("auth")
-		{
-			authGroup.Use(func(c *gin.Context) {
-				c.Writer.Header().Set("Content-Type", "application/json")
-				c.Next()
-			})
+	lc.Append(fx.Hook{
+		OnStart: func(context.Context) error {
+			PORT := config.PORT
 
-			mailer := mailer.NewMailer()
-			auth := authController.NewAuthController(db.GetDB(), mailer)
-
-			authGroup.POST("signup", auth.SignUp)
-			authGroup.POST("signin", auth.SignIn)
-			authGroup.POST("signout", auth.SignOut)
-			authGroup.POST("refresh", auth.RefreshToken)
-			authGroup.GET("verify", auth.VerifyLogin)
-			authGroup.POST("verify", auth.VerifyLogin)
-			authGroup.POST("request-password-reset", auth.RequestPasswordRecovery)
-			authGroup.POST("reset-password", auth.PasswordReset)
-			authGroup.GET("confirm", auth.ConfirmAccount)
-			authGroup.POST("confirm", auth.ConfirmAccount)
-			authGroup.Use(middlewares.IsLoggedIn())
-			authGroup.GET("me", auth.GetMe)
-		}
-	}
+			if err := router.Run(":" + PORT); err != nil {
+				return err
+			}
+			log.Println("Server started on port " + PORT)
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			fmt.Println("Stopping Auth server.")
+			return nil
+		},
+	})
 	return router
 }
