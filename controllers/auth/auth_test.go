@@ -9,6 +9,7 @@ import (
 	"github.com/overlorddamygod/go-auth/controllers/auth"
 	"github.com/overlorddamygod/go-auth/db"
 	"github.com/overlorddamygod/go-auth/mailer"
+	"github.com/overlorddamygod/go-auth/middlewares"
 	"github.com/overlorddamygod/go-auth/models"
 	"github.com/overlorddamygod/go-auth/server"
 	"github.com/stretchr/testify/suite"
@@ -45,6 +46,7 @@ func TestAuth(t *testing.T) {
 			db.NewDB,
 			mailer.NewMailer,
 			models.NewLogger,
+			middlewares.NewLimiter,
 			auth.NewAuthController,
 			server.NewRouter,
 		),
