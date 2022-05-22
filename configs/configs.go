@@ -24,6 +24,7 @@ type JwtConfig struct {
 
 type Config struct {
 	PORT                     string
+	RateLimit                string
 	RequireEmailConfirmation bool
 	Database                 DBConfig
 	AccessJwt                JwtConfig
@@ -71,6 +72,7 @@ func NewConfig(envPath string) func() *Config {
 
 		config := &Config{
 			PORT:                     getEnv("PORT", defaultConfig.PORT),
+			RateLimit:                getEnv("RATE_LIMIT", defaultConfig.RateLimit),
 			RequireEmailConfirmation: getEnv("MAIL_CONFIRMATION", "0") == "1",
 			AccessJwt:                access,
 			RefreshJwt:               refresh,
@@ -129,6 +131,7 @@ var configMap = map[string]string{
 
 var defaultConfig = Config{
 	PORT:                     "8080",
+	RateLimit:                "40-H",
 	RequireEmailConfirmation: false,
 	AccessJwt: JwtConfig{
 		Secret:     []byte(configMap["JWT_ACCESS_SECRET"]),

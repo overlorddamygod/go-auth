@@ -8,6 +8,7 @@ import (
 	"github.com/overlorddamygod/go-auth/controllers/auth"
 	"github.com/overlorddamygod/go-auth/db"
 	"github.com/overlorddamygod/go-auth/mailer"
+	"github.com/overlorddamygod/go-auth/middlewares"
 	"github.com/overlorddamygod/go-auth/models"
 	"github.com/overlorddamygod/go-auth/server"
 	"go.uber.org/fx"
@@ -21,6 +22,7 @@ func main() {
 			db.NewDB,
 			mailer.NewMailer,
 			models.NewLogger,
+			middlewares.NewLimiter,
 			auth.NewAuthController,
 			server.NewRouter,
 		),

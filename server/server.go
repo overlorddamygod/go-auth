@@ -6,9 +6,10 @@ import (
 	"github.com/overlorddamygod/go-auth/configs"
 	"github.com/overlorddamygod/go-auth/controllers/auth"
 	"github.com/overlorddamygod/go-auth/middlewares"
+	"github.com/ulule/limiter/v3"
 )
 
-func RegisterServer(config *configs.Config, router *gin.Engine, authC *auth.AuthController) {
+func RegisterServer(config *configs.Config, router *gin.Engine, limiter *limiter.Limiter, authC *auth.AuthController) {
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: config.AllowOrigins,
 		AllowHeaders: []string{"content-type", "x-access-token", "x-refresh-token"},
@@ -16,10 +17,13 @@ func RegisterServer(config *configs.Config, router *gin.Engine, authC *auth.Auth
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
 
+	limiterMiddleware := middlewares.NewMiddleware(limiter)
+
 	v1 := router.Group("api/v1")
 	{
 		authGroup := v1.Group("auth")
 		{
+			authGroup.Use(limiterMiddleware)
 			authGroup.Use(func(c *gin.Context) {
 				c.Writer.Header().Set("Content-Type", "application/json")
 				c.Next()
