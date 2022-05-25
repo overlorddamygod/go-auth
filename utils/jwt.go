@@ -11,8 +11,9 @@ import (
 )
 
 type CustomClaims struct {
-	UserID uuid.UUID `json:"user_id"`
-	Email  string    `json:"email"`
+	IdentityType string    `json:"identity_type"`
+	UserID       uuid.UUID `json:"user_id"`
+	Email        string    `json:"email"`
 	jwt.StandardClaims
 }
 

@@ -28,7 +28,7 @@ func (a *AuthController) SignUp(c *gin.Context) {
 	}
 	if a.config.RequireEmailConfirmation {
 		fmt.Println("Confirmation Token: ", user.ConfirmationToken)
-		err := a.mailer.SendConfirmationMail(user.Email, user.Name, "http://localhost:8080/api/v1/auth/confirm?token="+user.ConfirmationToken)
+		err := a.mailer.SendConfirmationMail(user.Email, user.Name, a.config.ApiUrl+"/api/v1/auth/confirm?token="+user.ConfirmationToken)
 		fmt.Println("MAIL: ", err)
 
 		result = a.logger.Log(models.MAIL_CONFIRMATION_SENT, user.Email)

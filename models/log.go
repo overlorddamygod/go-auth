@@ -9,6 +9,7 @@ type EventType string
 const (
 	SIGNUP                 EventType = "SIGNUP"
 	SIGNIN_EMAIL           EventType = "SIGNIN_EMAIL"
+	SIGNIN_GITHUB          EventType = "SIGNIN_GITHUB"
 	SIGNIN_MAGICLINK       EventType = "SIGNIN_MAGICLINK"
 	SIGNOUT                EventType = "SIGNOUT"
 	MAIL_CONFIRMATION_SENT EventType = "MAIL_CONFIRMATION_SENT"

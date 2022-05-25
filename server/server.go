@@ -31,6 +31,8 @@ func RegisterServer(config *configs.Config, router *gin.Engine, limiter *limiter
 
 			authGroup.POST("signup", authC.SignUp)
 			authGroup.POST("signin", authC.SignIn)
+			authGroup.GET("oauth", authC.OAuthGithub)
+			authGroup.GET("authorize", authC.OAuthAuthorize)
 			authGroup.POST("signout", authC.SignOut)
 			authGroup.POST("refresh", authC.RefreshToken)
 			authGroup.GET("verify", authC.VerifyLogin)
