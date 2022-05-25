@@ -28,7 +28,7 @@ func (a *AuthController) RequestPasswordRecovery(c *gin.Context) {
 
 	var dbUser models.User
 
-	result := a.db.First(&dbUser, "email = ?", params.Email)
+	result := a.db.First(&dbUser, "email = ? AND identity_type = ?", params.Email, "email")
 
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -76,7 +76,7 @@ func (a *AuthController) PasswordReset(c *gin.Context) {
 
 	var dbUser models.User
 
-	result := a.db.First(&dbUser, "password_reset_token = ?", token)
+	result := a.db.First(&dbUser, "password_reset_token = ? AND identity_type = ?", token, "email")
 
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {

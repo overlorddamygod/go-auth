@@ -35,7 +35,8 @@ func (a *AuthController) SignIn(c *gin.Context) {
 	}
 
 	var dbUser models.User
-	result := dbUser.GetUserByEmail(params.Email, a.db)
+
+	result := a.db.First(&dbUser, "email = ? AND identity_type = ?", params.Email, "email")
 
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -108,7 +109,7 @@ func (a *AuthController) VerifyLogin(c *gin.Context) {
 			return
 		}
 		var dbUser models.User
-		result := a.db.First(&dbUser, "token = ?", token)
+		result := a.db.First(&dbUser, "token = ? AND identity_type = ?", token, "email")
 
 		if result.Error != nil {
 			if errors.Is(result.Error, gorm.ErrRecordNotFound) {

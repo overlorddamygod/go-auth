@@ -2,6 +2,8 @@
 
 Simple authentication api written in go inspired by [gotrue](https://github.com/netlify/gotrue)
 
+**Supports email and password login, magic link, oauth**
+
 #### Requirements
 - [Golang](https://go.dev/)
 
@@ -87,6 +89,18 @@ user@main:~$ go test ./...
     "refresh_token": "JWT",
 }
 ```
+---
+## Sign in With Oauth
+#### GET /api/v1/auth/oauth
+
+**Query**
+|          Name | Required |  Type   | Description|
+| -------------:|:--------:|:-------:| ----------:|
+|     `oauth_provider` | required | string | github |
+|     `redirect_to` | required | string  | redirect url |
+
+`Redirects to redirect url with access_token and refresh_token`
+
 ---
 ## Get user data
 #### POST /api/v1/auth/me

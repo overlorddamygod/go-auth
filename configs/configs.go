@@ -22,7 +22,14 @@ type JwtConfig struct {
 	Expiration time.Duration
 }
 
+type Oauth struct {
+	AllowLogin   bool
+	ClientID     string
+	ClientSecret string
+}
+
 type Config struct {
+	ApiUrl                   string
 	PORT                     string
 	RateLimit                string
 	RequireEmailConfirmation bool
@@ -33,6 +40,7 @@ type Config struct {
 	TokenSecret1             []byte
 	TokenSecret2             []byte
 	AllowOrigins             []string
+	Oauth                    map[string]Oauth
 }
 
 type DBConfig struct {
@@ -71,6 +79,7 @@ func NewConfig(envPath string) func() *Config {
 		allowOriginsArray := strings.Split(allowOrigins, " ")
 
 		config := &Config{
+			ApiUrl:                   getEnv("API_URL", defaultConfig.ApiUrl),
 			PORT:                     getEnv("PORT", defaultConfig.PORT),
 			RateLimit:                getEnv("RATE_LIMIT", defaultConfig.RateLimit),
 			RequireEmailConfirmation: getEnv("MAIL_CONFIRMATION", "0") == "1",
@@ -88,6 +97,13 @@ func NewConfig(envPath string) func() *Config {
 			TokenSecret1: []byte(getEnv("TOKEN_SECRET1", configMap["TokenSecret1"])),
 			TokenSecret2: []byte(getEnv("TOKEN_SECRET2", configMap["TokenSecret2"])),
 			AllowOrigins: allowOriginsArray,
+			Oauth: map[string]Oauth{
+				"github": {
+					AllowLogin:   getEnv("GITHUB_ALLOW_LOGIN", configMap["GITHUB_ALLOW_LOGIN"]) == "1",
+					ClientID:     getEnv("GITHUB_CLIENT_ID", defaultConfig.Oauth["facebook"].ClientID),
+					ClientSecret: getEnv("GITHUB_CLIENT_SECRET", defaultConfig.Oauth["facebook"].ClientSecret),
+				},
+			},
 		}
 		// fmt.Println(config)
 		return config
@@ -127,9 +143,11 @@ var configMap = map[string]string{
 	"TokenSecret1":                 "PQNFuUjXBfOBbDcc8IlJlqL4",
 	"TokenSecret2":                 "Qjb2MwC5aPTA26gc",
 	"AllowOrigins":                 "http://localhost:3000",
+	"GITHUB_ALLOW_LOGIN":           "0",
 }
 
 var defaultConfig = Config{
+	ApiUrl:                   "http://localhost:8080",
 	PORT:                     "8080",
 	RateLimit:                "40-H",
 	RequireEmailConfirmation: false,

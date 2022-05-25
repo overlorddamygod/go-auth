@@ -43,10 +43,9 @@ func (a *AuthController) RefreshToken(c *gin.Context) {
 		response.Unauthorized(c, "refresh token invalid")
 		return
 	}
-	email := claims["email"].(string)
 
 	var dbUser models.User
-	result := a.db.First(&dbUser, "id = ?", claims["user_id"].(string))
+	result := a.db.First(&dbUser, "id = ?", userID)
 
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -75,8 +74,9 @@ func (a *AuthController) RefreshToken(c *gin.Context) {
 	}
 
 	accessToken, aTerr := utils.JwtAccessToken(utils.CustomClaims{
-		UserID: userID,
-		Email:  email,
+		IdentityType: dbUser.IdentityType,
+		UserID:       dbUser.ID,
+		Email:        dbUser.Email,
 	})
 
 	if aTerr != nil {

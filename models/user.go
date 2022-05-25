@@ -21,6 +21,9 @@ type User struct {
 	Email    string `gorm:"unique" validate:"required,email"`
 	Password string `validate:"required,min=6,max=20"`
 
+	IdentityType string `gorm:"default:'email'"`
+	Identities   JSONMap
+
 	PasswordResetToken   string
 	PasswordResetTokenAt time.Time
 
@@ -166,8 +169,9 @@ func (u *User) ConfirmAccount(db *gorm.DB) error {
 func (u *User) GenerateAccessRefreshToken(c *gin.Context, db *gorm.DB) (tokenMap map[string]string, err error) {
 	tokenMap = make(map[string]string)
 	accessToken, aTerr := utils.JwtAccessToken(utils.CustomClaims{
-		UserID: u.ID,
-		Email:  u.Email,
+		IdentityType: u.IdentityType,
+		UserID:       u.ID,
+		Email:        u.Email,
 	})
 
 	if aTerr != nil {
@@ -175,8 +179,9 @@ func (u *User) GenerateAccessRefreshToken(c *gin.Context, db *gorm.DB) (tokenMap
 	}
 
 	refreshToken, rTerr := utils.JwtRefreshToken(utils.CustomClaims{
-		UserID: u.ID,
-		Email:  u.Email,
+		IdentityType: u.IdentityType,
+		UserID:       u.ID,
+		Email:        u.Email,
 	})
 
 	if rTerr != nil {
@@ -217,46 +222,16 @@ func (u *User) SignInWithEmail(password string, db *gorm.DB, c *gin.Context) (ob
 		return nil, http.StatusUnauthorized, errors.New("user is not confirmed")
 	}
 
-	accessToken, aTerr := utils.JwtAccessToken(utils.CustomClaims{
-		UserID: u.ID,
-		Email:  u.Email,
-	})
+	token, err := u.GenerateAccessRefreshToken(c, db)
 
-	if aTerr != nil {
+	if err != nil {
 		return nil, http.StatusInternalServerError, errors.New("failed to sign in")
-	}
-
-	refreshToken, rTerr := utils.JwtRefreshToken(utils.CustomClaims{
-		UserID: u.ID,
-		Email:  u.Email,
-	})
-
-	if rTerr != nil {
-		return nil, http.StatusInternalServerError, errors.New("failed to sign in")
-	}
-
-	userAgent := c.GetHeader("User-Agent")
-
-	// get user ip
-	ip := c.ClientIP()
-
-	// create refresh token
-	refreshTokenModel := RefreshToken{
-		Token:     refreshToken,
-		UserID:    u.ID,
-		UserAgent: userAgent,
-		IP:        ip,
-	}
-	result := db.Create(&refreshTokenModel)
-
-	if result.Error != nil {
-		return nil, http.StatusInternalServerError, result.Error
 	}
 
 	return gin.H{
 		"error":         false,
-		"access_token":  accessToken,
-		"refresh_token": refreshToken,
+		"access_token":  token["accessToken"],
+		"refresh_token": token["refreshToken"],
 	}, http.StatusOK, nil
 }
 
@@ -284,7 +259,7 @@ func (u *User) GenerateMagicLink(c *gin.Context, db *gorm.DB, mailer *mailer.Mai
 
 	u.TokenSentAt = time.Now()
 
-	magicLink := fmt.Sprintf("http://localhost:8080/api/v1/auth/verify?type=%s&token=%s&redirect_to=%s", "magiclink", encryptedToken, redirect_to)
+	magicLink := fmt.Sprintf("%s/api/v1/auth/verify?type=%s&token=%s&redirect_to=%s", configs.MainConfig.ApiUrl, "magiclink", encryptedToken, redirect_to)
 	err = db.Transaction(func(tx *gorm.DB) error {
 		if err = tx.Save(u).Error; err != nil {
 			return err
