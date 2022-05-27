@@ -18,7 +18,7 @@ import (
 type User struct {
 	Basic
 	Name     string `validate:"required,min=3" binding:"required"`
-	Email    string `gorm:"unique" validate:"required,email"`
+	Email    string `gorm:"index:email,unique" validate:"required,email"`
 	Password string `validate:"required,min=6,max=20"`
 
 	IdentityType string `gorm:"default:'email'"`
@@ -68,28 +68,7 @@ func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
 			return errors.New("server error")
 		}
 	}
-	// validate := validator.New()
-	// // validator.Validate(u)
-	// err := validate.Struct(u)
 
-	// if err != nil {
-	// 	return err
-	// }
-
-	result := tx.First(&User{}, "email = ?", u.Email)
-
-	if result.Error == nil {
-		return errors.New("email already exists")
-	}
-
-	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return errors.New("server error")
-	}
-
-	u.Password, err = utils.HashPassword(u.Password)
-	if err != nil {
-		return errors.New("server error")
-	}
 	return nil
 }
 
@@ -213,10 +192,13 @@ func (u *User) GenerateAccessRefreshToken(c *gin.Context, db *gorm.DB) (tokenMap
 }
 
 func (u *User) SignInWithEmail(password string, db *gorm.DB, c *gin.Context) (obj interface{}, code int, err error) {
+	fmt.Println(utils.CheckPasswordHash(password, u.Password), password, u.Password)
+
 	// sign in with email
 	if !utils.CheckPasswordHash(password, u.Password) {
 		return nil, http.StatusUnauthorized, errors.New("invalid password")
 	}
+	fmt.Println(password)
 
 	if !u.IsConfirmed() {
 		return nil, http.StatusUnauthorized, errors.New("user is not confirmed")
@@ -284,12 +266,16 @@ func (u *User) GenerateMagicLink(c *gin.Context, db *gorm.DB, mailer *mailer.Mai
 	}, http.StatusOK, nil
 }
 
-func NewUser(name string, email string, password string) User {
+func NewUser(name string, email string, password string) (User, error) {
+	pass, err := utils.HashPassword(password)
+	if err != nil {
+		return User{}, err
+	}
 	return User{
 		Name:     name,
 		Email:    email,
-		Password: password,
-	}
+		Password: pass,
+	}, nil
 }
 
 type SanitizedUser struct {

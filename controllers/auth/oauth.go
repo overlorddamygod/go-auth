@@ -111,7 +111,13 @@ func (a *AuthController) OAuthAuthorize(c *gin.Context) {
 			return
 		}
 
-		var newUser models.User = models.NewUser(user.Name, user.Email, randomPassword)
+		newUser, err := models.NewUser(user.Name, user.Email, randomPassword)
+
+		if err != nil {
+			response.ServerError(c, "server error")
+			return
+		}
+
 		newUser.IdentityType = "github"
 
 		if err := a.db.Transaction(func(tx *gorm.DB) error {

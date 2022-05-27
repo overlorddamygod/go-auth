@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgconn"
 	"github.com/overlorddamygod/go-auth/models"
 	"github.com/overlorddamygod/go-auth/utils/response"
 )
@@ -16,16 +17,32 @@ type SignUpParams struct {
 
 func (a *AuthController) SignUp(c *gin.Context) {
 	var params SignUpParams
-	c.Bind(&params)
+	if err := c.Bind(&params); err != nil {
+		response.BadRequest(c, "invalid params")
+		return
+	}
 
-	var user models.User = models.NewUser(params.Name, params.Email, params.Password)
+	user, err := models.NewUser(params.Name, params.Email, params.Password)
+
+	if err != nil {
+		response.ServerError(c, "server error")
+		return
+	}
 
 	result := a.db.Create(&user)
 
 	if result.Error != nil {
+		err := result.Error.(*pgconn.PgError)
+
+		if err.Code == "23505" {
+			response.BadRequest(c, "email already exists")
+			return
+		}
+
 		response.BadRequest(c, result.Error.Error())
 		return
 	}
+
 	if a.config.RequireEmailConfirmation {
 		fmt.Println("Confirmation Token: ", user.ConfirmationToken)
 		err := a.mailer.SendConfirmationMail(user.Email, user.Name, a.config.ApiUrl+"/api/v1/auth/confirm?token="+user.ConfirmationToken)

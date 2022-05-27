@@ -20,7 +20,10 @@ type SignInParams struct {
 
 func (a *AuthController) SignIn(c *gin.Context) {
 	var params SignInParams
-	c.Bind(&params)
+	if err := c.Bind(&params); err != nil {
+		response.BadRequest(c, "invalid params")
+		return
+	}
 
 	loginType := c.Query("type")
 

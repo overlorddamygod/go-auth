@@ -28,7 +28,7 @@ func (ts *AuthTestSuite) TestRequiresName() {
 
 	assert.NoError(ts.T(), json.NewDecoder(w.Body).Decode(&response))
 	assert.Equal(ts.T(), http.StatusBadRequest, w.Code)
-	assert.Equal(ts.T(), response.Message, "name is required")
+	assert.Equal(ts.T(), "invalid params", response.Message)
 }
 
 func (ts *AuthTestSuite) TestNewUser() {
