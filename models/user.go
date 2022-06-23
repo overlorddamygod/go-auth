@@ -267,6 +267,10 @@ func (u *User) GenerateMagicLink(c *gin.Context, db *gorm.DB, mailer *mailer.Mai
 }
 
 func NewUser(name string, email string, password string) (User, error) {
+	if len(password) < 6 {
+		return User{}, errors.New("password must be at least 6 characters")
+	}
+
 	pass, err := utils.HashPassword(password)
 	if err != nil {
 		return User{}, err

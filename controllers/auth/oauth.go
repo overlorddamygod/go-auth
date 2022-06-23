@@ -88,14 +88,34 @@ func (a *AuthController) OAuthAuthorize(c *gin.Context) {
 		result := a.db.First(&dbUser, "email = ?", user.Email)
 
 		if result.Error == nil {
-			tokenMap, err := dbUser.GenerateAccessRefreshToken(c, a.db)
+			identities, ok := dbUser.Identities["identities"].([]interface{})
 
-			if err != nil {
+			if !ok {
+				// respond error
 				response.ServerError(c, "server error")
 				return
 			}
-			redirect_to = fmt.Sprintf("%s?type=githuboauth&access_token=%s&refresh_token=%s", redirect_to, tokenMap["accessToken"], tokenMap["refreshToken"])
-			c.Redirect(http.StatusFound, redirect_to)
+
+			if dbUser.IdentityType == oauthProvider || Contains(identities, oauthProvider) {
+
+				tokenMap, err := dbUser.GenerateAccessRefreshToken(c, a.db)
+
+				if err != nil {
+					response.ServerError(c, "server error")
+					return
+				}
+				result = a.logger.Log(models.SIGNIN_GITHUB, dbUser.Email)
+
+				if result.Error != nil {
+					fmt.Println("Error Logging: ", models.SIGNIN_GITHUB, result.Error)
+				}
+				redirect_to = fmt.Sprintf("%s?type=githuboauth&access_token=%s&refresh_token=%s", redirect_to, tokenMap["accessToken"], tokenMap["refreshToken"])
+				c.Redirect(http.StatusFound, redirect_to)
+				return
+			}
+
+			redirect_to = fmt.Sprintf("%s?error=not_found", redirect_to)
+			c.Redirect(http.StatusNotFound, redirect_to)
 			return
 		}
 
@@ -160,4 +180,13 @@ func IsProviderValid(config *configs.Config, providerName string) bool {
 		return false
 	}
 	return true
+}
+
+func Contains(slice []interface{}, match string) bool {
+	for i := 0; i < len(slice); i++ {
+		if slice[i] == match {
+			return true
+		}
+	}
+	return false
 }

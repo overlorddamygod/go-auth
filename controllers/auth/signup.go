@@ -10,9 +10,9 @@ import (
 )
 
 type SignUpParams struct {
-	Name     string `json:"name" binding:"required"`
-	Email    string `json:"email" binding:"required"`
-	Password string `json:"password" binding:"required"`
+	Name     string `json:"name" binding:"required,min=3"`
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required,min=6,max=20"`
 }
 
 func (a *AuthController) SignUp(c *gin.Context) {
@@ -32,11 +32,13 @@ func (a *AuthController) SignUp(c *gin.Context) {
 	result := a.db.Create(&user)
 
 	if result.Error != nil {
-		err := result.Error.(*pgconn.PgError)
+		err, ok := result.Error.(*pgconn.PgError)
 
-		if err.Code == "23505" {
-			response.BadRequest(c, "email already exists")
-			return
+		if ok {
+			if err.Code == "23505" {
+				response.BadRequest(c, "email already exists")
+				return
+			}
 		}
 
 		response.BadRequest(c, result.Error.Error())
