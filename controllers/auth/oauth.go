@@ -13,6 +13,11 @@ import (
 	"gorm.io/gorm"
 )
 
+type OauthProvider interface {
+	Do(code string) (string, *models.User, error)
+	GetOauthUrl(redirect_to string) (string, error)
+}
+
 func (a *AuthController) OAuthGithub(c *gin.Context) {
 	oauthProvider := c.Query("oauth_provider")
 	redirect_to := c.Query("redirect_to")
