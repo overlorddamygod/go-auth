@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/overlorddamygod/go-auth/configs"
 	"github.com/overlorddamygod/go-auth/controllers/auth"
+	"github.com/overlorddamygod/go-auth/controllers/auth/admin"
 	"github.com/overlorddamygod/go-auth/db"
 	"github.com/overlorddamygod/go-auth/mailer"
 	"github.com/overlorddamygod/go-auth/middlewares"
@@ -48,6 +49,7 @@ func TestAuth(t *testing.T) {
 			models.NewLogger,
 			middlewares.NewLimiter,
 			auth.NewAuthController,
+			admin.NewAdminController,
 			server.NewRouter,
 		),
 		fx.Populate(&dbConn),

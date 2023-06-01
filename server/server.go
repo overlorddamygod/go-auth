@@ -5,11 +5,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/overlorddamygod/go-auth/configs"
 	"github.com/overlorddamygod/go-auth/controllers/auth"
+	"github.com/overlorddamygod/go-auth/controllers/auth/admin"
 	"github.com/overlorddamygod/go-auth/middlewares"
 	"github.com/ulule/limiter/v3"
 )
 
-func RegisterServer(config *configs.Config, router *gin.Engine, limiter *limiter.Limiter, authC *auth.AuthController) {
+func RegisterServer(config *configs.Config, router *gin.Engine, limiter *limiter.Limiter, authC *auth.AuthController, adminC *admin.AdminController) {
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: config.AllowOrigins,
 		AllowHeaders: []string{"content-type", "x-access-token", "x-refresh-token"},
@@ -23,6 +24,14 @@ func RegisterServer(config *configs.Config, router *gin.Engine, limiter *limiter
 	{
 		authGroup := v1.Group("auth")
 		{
+			adminGroup := authGroup.Group("admin")
+			{
+				adminGroup.Use(middlewares.IsAdmin())
+				adminGroup.GET("users", adminC.GetUsersPaginated)
+				adminGroup.GET("user", adminC.GetUserByEmail)
+				adminGroup.DELETE("user/:id", adminC.DeleteUser)
+			}
+
 			authGroup.Use(limiterMiddleware)
 			authGroup.Use(func(c *gin.Context) {
 				c.Writer.Header().Set("Content-Type", "application/json")

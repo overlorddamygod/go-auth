@@ -32,6 +32,7 @@ type Config struct {
 	ApiUrl                   string
 	PORT                     string
 	RateLimit                string
+	AdminSecret              string
 	RequireEmailConfirmation bool
 	Database                 DBConfig
 	AccessJwt                JwtConfig
@@ -55,6 +56,12 @@ func NewConfig(envPath string) func() *Config {
 
 		if err != nil {
 			log.Println("Error loading .env file")
+		}
+
+		adminSecret, ok := os.LookupEnv("GOAUTH_ADMIN_SECRET")
+
+		if !ok {
+			log.Fatalln("Error loading GOAUTH_ADMIN_SECRET")
 		}
 
 		access, err := loadJWTConfig("JWT_ACCESS")
@@ -82,6 +89,7 @@ func NewConfig(envPath string) func() *Config {
 			ApiUrl:                   getEnv("API_URL", defaultConfig.ApiUrl),
 			PORT:                     getEnv("PORT", defaultConfig.PORT),
 			RateLimit:                getEnv("RATE_LIMIT", defaultConfig.RateLimit),
+			AdminSecret:              adminSecret,
 			RequireEmailConfirmation: getEnv("MAIL_CONFIRMATION", "0") == "1",
 			AccessJwt:                access,
 			RefreshJwt:               refresh,
