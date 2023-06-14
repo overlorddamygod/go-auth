@@ -45,7 +45,7 @@ func (a *AuthController) RefreshToken(c *gin.Context) {
 	}
 
 	var dbUser models.User
-	result := a.db.First(&dbUser, "id = ?", userID)
+	result := a.db.Preload("Roles").First(&dbUser, "id = ?", userID)
 
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -73,11 +73,7 @@ func (a *AuthController) RefreshToken(c *gin.Context) {
 		return
 	}
 
-	accessToken, aTerr := utils.JwtAccessToken(utils.CustomClaims{
-		IdentityType: dbUser.IdentityType,
-		UserID:       dbUser.ID,
-		Email:        dbUser.Email,
-	})
+	accessToken, aTerr := dbUser.GetAccessToken()
 
 	if aTerr != nil {
 		response.ServerError(c, "failed to refresh token")
@@ -92,6 +88,6 @@ func (a *AuthController) RefreshToken(c *gin.Context) {
 
 	response.WithCustomStatusAndMessage(c, http.StatusOK, gin.H{
 		"error":        false,
-		"access-token": accessToken,
+		"access_token": accessToken,
 	})
 }

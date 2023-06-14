@@ -36,6 +36,7 @@ type User struct {
 	Confirmed           bool `gorm:"default:false"`
 	ConfirmedAt         time.Time
 	RefreshToken        []RefreshToken `gorm:"one2many;constraint:OnDelete:CASCADE"`
+	Roles               []UserRole     `gorm:"one2many:user_roles"`
 }
 
 func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
@@ -145,23 +146,42 @@ func (u *User) ConfirmAccount(db *gorm.DB) error {
 	return db.Save(u).Error
 }
 
-func (u *User) GenerateAccessRefreshToken(c *gin.Context, db *gorm.DB) (tokenMap map[string]string, err error) {
-	tokenMap = make(map[string]string)
-	accessToken, aTerr := utils.JwtAccessToken(utils.CustomClaims{
+func (u *User) GetRoles() []int {
+	var roles []int
+
+	for _, role := range u.Roles {
+		roles = append(roles, role.Type)
+	}
+
+	return roles
+}
+
+func (u *User) GetAccessToken() (string, error) {
+	return utils.JwtAccessToken(utils.CustomClaims{
+		IdentityType: u.IdentityType,
+		UserID:       u.ID,
+		Email:        u.Email,
+		Roles:        u.GetRoles(),
+	})
+}
+func (u *User) GetRefreshToken() (string, error) {
+	return utils.JwtRefreshToken(utils.CustomClaims{
 		IdentityType: u.IdentityType,
 		UserID:       u.ID,
 		Email:        u.Email,
 	})
+}
+
+func (u *User) GenerateAccessRefreshToken(c *gin.Context, db *gorm.DB) (tokenMap map[string]string, err error) {
+	tokenMap = make(map[string]string)
+
+	accessToken, aTerr := u.GetAccessToken()
 
 	if aTerr != nil {
 		return nil, errors.New("failed to sign in")
 	}
 
-	refreshToken, rTerr := utils.JwtRefreshToken(utils.CustomClaims{
-		IdentityType: u.IdentityType,
-		UserID:       u.ID,
-		Email:        u.Email,
-	})
+	refreshToken, rTerr := u.GetRefreshToken()
 
 	if rTerr != nil {
 		return nil, errors.New("failed to sign in")

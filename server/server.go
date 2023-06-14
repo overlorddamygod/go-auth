@@ -30,6 +30,13 @@ func RegisterServer(config *configs.Config, router *gin.Engine, limiter *limiter
 				adminGroup.GET("users", adminC.GetUsersPaginated)
 				adminGroup.GET("user", adminC.GetUserByEmail)
 				adminGroup.DELETE("user/:id", adminC.DeleteUser)
+
+				roleGroup := adminGroup.Group("role")
+				{
+					roleGroup.POST("create", adminC.CreateRole)
+					roleGroup.DELETE("delete", adminC.DeleteRole)
+					roleGroup.POST("add", adminC.AddRoleToUser)
+				}
 			}
 
 			authGroup.Use(limiterMiddleware)

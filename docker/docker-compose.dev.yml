@@ -35,7 +35,27 @@ services:
       - goauthnewtwork
     volumes:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - pgdata:/var/lib/postgresql/data
+
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin4
+    restart: always
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin123 
+    networks:
+      - goauthnewtwork
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
 
 networks:
   goauthnewtwork:
     driver: bridge
+
+volumes: 
+  pgdata:
+  pgadmin-data:

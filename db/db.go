@@ -19,5 +19,7 @@ func NewDB(config *configs.Config) *gorm.DB {
 	dbCon.AutoMigrate(&models.User{})
 	dbCon.AutoMigrate(&models.RefreshToken{})
 	dbCon.AutoMigrate(&models.Log{})
+	dbCon.AutoMigrate(&models.Role{})
+	dbCon.AutoMigrate(&models.UserRole{})
 	return dbCon
 }
