@@ -41,7 +41,7 @@ jobs:
         go-version: 1.17
 
     - name: Start PostgreSQL service
-      run: docker run -d --name postgres-test -p 5432:5432 -e POSTGRES_USER=your_username -e POSTGRES_PASSWORD=your_password -e POSTGRES_DB=your_database postgres:latest
+      run: docker run -d --name ${{ secrets.POSTGRES_DB }} -p 5432:5432 -e POSTGRES_USER=${{secrets.POSTGRES_USER}} -e POSTGRES_PASSWORD=${{secrets.POSTGRES_PASSWORD}} -e POSTGRES_DB=${{ secrets.POSTGRES_DB }} postgres:latest
 
     - name: Wait for PostgreSQL to start
       run: |
