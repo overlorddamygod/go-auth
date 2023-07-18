@@ -38,7 +38,7 @@ func (ts *AuthTestSuite) TestNewUser() {
 }
 
 func (ts *AuthTestSuite) TestUserAlreadyRegistered() {
-	w, _, _ := ts.SignUp("Test12345", "test12345@gmail.com", "test123456")
+	w, _, _ := ts.SignUp(ts.user.Name, ts.user.Email, ts.user.Password)
 
 	assert.NotEqual(ts.T(), http.StatusCreated, w.Code)
 }

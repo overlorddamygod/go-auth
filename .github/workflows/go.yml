@@ -46,6 +46,10 @@ jobs:
       run: |
         until nc -z localhost 5432; do sleep 1; done
 
+    - name: Enable uuid-ossp extension
+      run: |
+        echo "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";" | PGPASSWORD=${{ secrets.POSTGRES_PASSWORD }} psql -h localhost -U ${{ secrets.POSTGRES_USER }} -d ${{ secrets.POSTGRES_DB }} -w
+
     - name: Test
       env:
         JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
