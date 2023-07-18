@@ -16,6 +16,8 @@ func NewDB(config *configs.Config) *gorm.DB {
 		panic("failed to connect database")
 	}
 
+	dbCon.Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";")
+
 	dbCon.AutoMigrate(&models.User{})
 	dbCon.AutoMigrate(&models.RefreshToken{})
 	dbCon.AutoMigrate(&models.Log{})
