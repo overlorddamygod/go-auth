@@ -25,6 +25,13 @@ jobs:
       with:
         go-version: 1.17
 
+    - name: Start PostgreSQL service
+      run: docker run -d --name postgres-test -p 5432:5432 -e POSTGRES_USER=your_username -e POSTGRES_PASSWORD=your_password -e POSTGRES_DB=your_database postgres:latest
+
+    - name: Wait for PostgreSQL to start
+      run: |
+        until nc -z localhost 5432; do sleep 1; done
+
     - name: Build
       run: go build -v ./...
 
@@ -44,7 +51,7 @@ jobs:
         TOKEN_SECRET2: ${{ secrets.TOKEN_SECRET2 }}
         GOAUTH_ADMIN_SECRET: ${{ secrets.GOAUTH_ADMIN_SECRET }}
       run: go test -v ./...
-      
+
   Deploy:
     runs-on: ubuntu-latest
     steps:
