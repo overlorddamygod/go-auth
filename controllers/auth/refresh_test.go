@@ -13,7 +13,7 @@ import (
 type RefreshResponse struct {
 	Error       bool   `json:"error"`
 	Message     string `json:"message"`
-	AccessToken string `json:"access-token"`
+	AccessToken string `json:"access_token"`
 }
 
 func (ts *AuthTestSuite) TestInvalidRefreshToken() {
