@@ -66,6 +66,12 @@ user@main:~$ go test ./...
         * [/user](#get-user-by-email) Get User By Email
         * [/user](#delete-user) Delete user
 
+        * [/role](#create-role) Roles Endpoints
+            * [/create](#create-role) Create Role
+            * [/add](#add-role-to-user) Add role to user
+            * [/remove](#remove-role-from-userr) Remove role from user
+            * [/delete](#delete-role) Delete A Role
+
 ## Sign up new user
 #### POST /api/v1/auth/signup
 
@@ -321,6 +327,100 @@ Example: http://localhost:3000?access_token=JWT&refresh_toke=JWT
 {
     "error": false,
     "message": "user deleted"
+}
+```
+---
+## Create Role
+#### POST /api/v1/auth/admin/role/create
+
+**Headers**
+
+|          Name | Required |  Type   |
+| -------------:|:--------:|:-------:| 
+|     `x-api-token` | required | string  |
+
+**Body**
+
+|          Name | Required |  Type   |
+| -------------:|:--------:|:-------:| 
+|     `name` | required | string  |
+
+**Response**
+```json
+{
+    "error": false,
+    "message": "role created"
+}
+```
+---
+## Add Role To User
+#### POST /api/v1/auth/admin/role/add
+
+**Headers**
+
+|          Name | Required |  Type   |
+| -------------:|:--------:|:-------:| 
+|     `x-api-token` | required | string  |
+
+**Body**
+
+|          Name | Required |  Type   |
+| -------------:|:--------:|:-------:| 
+|     `user_id` | required | uuid  |
+|     `role_id` | required | int  |
+
+**Response**
+```json
+{
+    "error": false,
+    "message": "role added to user"
+}
+```
+---
+## Remove Role from User
+#### POST /api/v1/auth/admin/role/remove
+
+**Headers**
+
+|          Name | Required |  Type   |
+| -------------:|:--------:|:-------:| 
+|     `x-api-token` | required | string  |
+
+**Body**
+
+|          Name | Required |  Type   |
+| -------------:|:--------:|:-------:| 
+|     `user_id` | required | uuid  |
+|     `role_id` | required | int  |
+
+**Response**
+```json
+{
+    "error": false,
+    "message": "role removed from user"
+}
+```
+---
+## Delete Role
+#### DELETE /api/v1/auth/admin/role/delete
+
+**Headers**
+
+|          Name | Required |  Type   |
+| -------------:|:--------:|:-------:| 
+|     `x-api-token` | required | string  |
+
+**Body**
+
+|          Name | Required |  Type   |
+| -------------:|:--------:|:-------:| 
+|     `id` | required | int  |
+
+**Response**
+```json
+{
+    "error": false,
+    "message": "role deleted"
 }
 ```
 ---

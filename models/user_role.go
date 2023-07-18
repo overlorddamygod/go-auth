@@ -5,11 +5,11 @@ import (
 )
 
 type UserRole struct {
-	UserID uuid.UUID `gorm:"type:uuid;column:user_id" json:"user_id"`
+	UserID uuid.UUID `gorm:"type:uuid;primaryKey;column:user_id" json:"user_id"`
 	User   User      `gorm:"foreignKey:UserID"`
-	Type   int       `gorm:"column:type" json:"type"`
+	Type   int       `gorm:"primaryKey;column:type" json:"type"`
 	Role   Role      `gorm:"foreignKey:Type"`
-	Basic
+	Time
 }
 
 func (UserRole) TableName() string {

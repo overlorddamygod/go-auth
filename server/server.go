@@ -36,6 +36,7 @@ func RegisterServer(config *configs.Config, router *gin.Engine, limiter *limiter
 					roleGroup.POST("create", adminC.CreateRole)
 					roleGroup.DELETE("delete", adminC.DeleteRole)
 					roleGroup.POST("add", adminC.AddRoleToUser)
+					roleGroup.POST("remove", adminC.RemoveRoleFromUser)
 				}
 			}
 
