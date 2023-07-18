@@ -57,6 +57,7 @@ func TestAuth(t *testing.T) {
 		fx.Populate(&configs.MainConfig),
 		fx.Invoke(server.RegisterServer),
 	)
+	fmt.Println("DSN", configs.MainConfig.Database.PostgresDSN)
 
 	s := &AuthTestSuite{
 		db:     dbConn,
