@@ -7,7 +7,22 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  Build:
+    runs-on: ubuntu-latest
+    environment: GoAuthENV
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.17
+
+    - name: Build
+      run: go build -v ./...
+
+  Test:
+    needs: Build
     runs-on: ubuntu-latest
     environment: GoAuthENV
     services:
@@ -32,9 +47,6 @@ jobs:
       run: |
         until nc -z localhost 5432; do sleep 1; done
 
-    - name: Build
-      run: go build -v ./...
-
     - name: Test
       env:
         JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
@@ -53,6 +65,7 @@ jobs:
       run: go test -v ./...
 
   Deploy:
+    needs: Test
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
