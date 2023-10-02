@@ -12,8 +12,8 @@ import (
 
 func RegisterServer(config *configs.Config, router *gin.Engine, limiter *limiter.Limiter, authC *auth.AuthController, adminC *admin.AdminController) {
 	router.Use(cors.New(cors.Config{
-		AllowOrigins: config.AllowOrigins,
-		AllowHeaders: []string{"content-type", "x-access-token", "x-refresh-token"},
+		AllowOrigins: []string{"*"},
+		AllowHeaders: []string{"content-type", "accept", "access-control-allow-origin", "origin", "authorization", "x-access-token", "x-refresh-token"},
 	}))
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
